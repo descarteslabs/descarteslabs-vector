@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "vector"
+version = "0.1.0"
+description = ""
+authors = ["Descartes Labs"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.8"
+descarteslabs = "^1.12.1"
+ipyleaflet = "^0.17.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
