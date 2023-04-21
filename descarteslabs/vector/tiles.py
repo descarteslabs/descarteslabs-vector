@@ -3,9 +3,9 @@ import urllib.parse
 from typing import List, Optional
 
 import ipyleaflet  # type: ignore
-from descarteslabs.common.property_filtering import GenericProperties
 
 from .common import API_HOST
+from .property_filtering import GenericProperties
 
 
 def create_layer(

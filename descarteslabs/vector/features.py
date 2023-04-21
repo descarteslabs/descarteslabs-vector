@@ -1,7 +1,7 @@
 import requests
-from descarteslabs.common.property_filtering import GenericProperties
 
 from .common import API_HOST, get_token
+from .property_filtering import GenericProperties
 
 
 def add(product_id: str, feature_collection: dict):

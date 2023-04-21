@@ -4,6 +4,9 @@ version = "0.1.0"
 description = ""
 authors = ["Descartes Labs"]
 readme = "README.md"
+packages = [
+    { include = "descarteslabs" },
+]
 
 [tool.poetry.dependencies]
 python = "~3.8"
