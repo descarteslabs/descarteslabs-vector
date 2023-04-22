@@ -1,4 +1,6 @@
-from . import features, products, property_filtering, tiles
+from descarteslabs.common import property_filtering
+
+from . import features, products, tiles
 
 properties = property_filtering.GenericProperties()
 
