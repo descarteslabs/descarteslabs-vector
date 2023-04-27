@@ -200,19 +200,24 @@ class Table:
         if table_exists:
             raise Exception(f'A table with id "{product_id}" already exists')
 
-        return Table(create_product(product_id, *args, *kwargs))
+        return Table(create_product(product_id, *args, **kwargs))
 
     @staticmethod
-    def list() -> [Table]:
+    def list(tags: Union[List[str], None] = None) -> List[Table]:
         """
         List available vector products
 
+        Parameters
+        ----------
+        tags: List[str]
+            Optional list of tags a table must have to be returned.
+
         Returns
         -------
-        products: list(Table)
+        products: list[Table]
             List of table instances.
         """
-        return [Table(d) for d in list_products()]
+        return [Table(d) for d in list_products(tags=tags)]
 
     def __init__(self, table_parameters: Union[dict, str]):
         """
