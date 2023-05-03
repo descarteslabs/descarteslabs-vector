@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "~3.8"
-descarteslabs = "^1.12.1"
+descarteslabs = {url = "https://github.com/descarteslabs/descarteslabs-python/archive/refs/tags/v2.0.0rc0.zip#egg=descarteslabs"}
 ipyleaflet = "^0.17.2"
 
 
