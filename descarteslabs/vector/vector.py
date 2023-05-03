@@ -7,19 +7,119 @@ from typing import Callable, List, Optional, Union
 import descarteslabs as dl
 import geojson
 import ipyleaflet
+import shapely
 from descarteslabs.utils import Properties
 
-from .features import add as add_features
-from .features import delete as delete_features
-from .features import get as get_feature
-from .features import query as query_features
-from .features import update as update_features
-from .products import create as create_product
-from .products import delete as delete_product
-from .products import get as get_product
-from .products import list as list_products
-from .products import update as update_product
+# To avoid confusion we import these as <module>_<function>
+from .features import add as features_add
+from .features import delete as features_delete
+from .features import get as features_get
+from .features import query as features_query
+from .features import update as features_update
+from .products import create as products_create
+from .products import delete as products_delete
+from .products import get as products_get
+from .products import list as products_list
+from .products import update as products_update
 from .tiles import create_layer
+
+
+class Feature:
+    def __init__(self, parameters: dict, parent_table: Table):
+        """
+        Initialize a new Feature instance. This should not be used directly.
+
+        Parameters
+        ----------
+        parameters: dict
+            JSON representation of this feature.
+        parent_table: Table
+            Optional parent table
+        """
+        assert isinstance(parameters, dict)
+        assert parent_table
+        self.parameters = parameters
+        self.parent_table = parent_table
+
+    def __str__(self):
+        """
+        Simple string representation
+
+        Returns
+        -------
+        s: str
+            Simple string representation
+        """
+        return f"{self.parent_table}:{self.parameters['uuid']}"
+
+    def __repr__(self):
+        """
+        String representation
+
+        Returns
+        -------
+        r: str
+            String representation
+        """
+        return f"{self.parent_table}:{json.dumps(self.parameters, sort_keys=True)}"
+
+    def set_properties(self, properties: dict):
+        """
+        Set properties for this Feature
+
+        Parameters
+        ----------
+        properties: dict
+            New properties for this feature
+        """
+        self.parameters["properties"] = properties
+
+    def update(self):
+        """
+        Update this feature
+        """
+        x = deepcopy(self.parameters)
+        x.pop("uuid", None)
+        features_update(self.parent_table.parameters["id"], self.parameters["uuid"], x)
+
+    def delete(self):
+        """
+        Delete this feature
+        """
+        features_delete(self.parent_table.parameters["id"], self.parameters["uuid"])
+
+    def properties(self) -> dict:
+        """
+        Get properties
+
+        Returns
+        -------
+        properties: dict
+            Feature properties
+        """
+        return deepcopy(self.parameters["properties"])
+
+    def geometry(self) -> dict:
+        """
+        Get geometry
+
+        Returns
+        -------
+        geometry: dict
+            Feature geometry
+        """
+        return deepcopy(self.parameters["geometry"])
+
+    def uuid(self) -> dict:
+        """
+        Get uuid
+
+        Returns
+        -------
+        uuid: uuid
+            Feature UUID
+        """
+        return self.parameters["uuid"]
 
 
 class FeatureCollection:
@@ -30,7 +130,7 @@ class FeatureCollection:
     def __init__(
         self,
         feature_collection: Union[dict, geojson.FeatureCollection],
-        parent_table: Table = None,
+        parent_table: Table,
     ):
         """
         Initialize a FeatureCollection instance.
@@ -49,9 +149,12 @@ class FeatureCollection:
             # ... if it were, this following line would be sufficient
             self.feature_collection = geojson.FeatureCollection(feature_collection)
 
-        self.parent = parent_table
+        assert parent_table
 
-    def __str__(self):
+        self.parent_table = parent_table
+        self.feature_list = self.feature_collection["features"]
+
+    def __str__(self) -> str:
         """
         Simple string representation
 
@@ -61,9 +164,9 @@ class FeatureCollection:
             String representation
         """
         num_features = len(self.feature_collection["features"])
-        return f"{num_features} from {self.parent}"
+        return f"{num_features} from {self.parent_table}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation
 
@@ -72,17 +175,17 @@ class FeatureCollection:
         json: str
             JSON represetnation of this instance
         """
-        return json.dumps(self.feature_collection)
+        return json.dumps(self.feature_collection, sort_keys=True)
 
-    def filter(self, filter_func: Callable[[dict], bool]):
+    def filter(self, filter_func: Callable[[Feature], bool]):
         """
         Create a new FeatureCollection by filtering this one. Note this filtering is performed
         on data that have *already* been pulled from the server. Where possible filtering
-        should be performed with Table.query.
+        should be performed with a FeatureSearch instance.
 
         Parameters
         ----------
-        filter_func: Callable[[dict], bool]
+        filter_func: Callable[[Feature], bool]
             Preciate for selecting features.
 
         Returns
@@ -91,8 +194,12 @@ class FeatureCollection:
             New FeatureCollection instance derived from filtering this one.
         """
         new_fc = deepcopy(self.feature_collection)
-        new_fc["features"] = list(filter(filter_func, new_fc["features"]))
-        return FeatureCollection(new_fc, self.parent)
+        new_fc["features"] = list(
+            filter(
+                lambda f: filter_func(Feature(f, self.parent_table)), new_fc["features"]
+            )
+        )
+        return FeatureCollection(new_fc, self.parent_table)
 
     def get_feature(self, feature_id: str):
         """
@@ -110,29 +217,226 @@ class FeatureCollection:
         dict
             A GeoJSON Feature.
         """
-        # Note that it is possible that there is no such element here, in which case
 
         try:
-            return next(
-                filter(
-                    lambda x: x["uuid"] == feature_id,
-                    self.feature_collection["features"],
-                )
+            return Feature(
+                next(
+                    filter(
+                        lambda x: x["uuid"] == feature_id,
+                        self.feature_list,
+                    )
+                ),
+                self.parent_table,
             )
         except StopIteration:
             # Raise a more user-friendly exception
-            raise KeyError(f"Could not find {feature_id} in this FeatureCollection")
+            raise KeyError(f'Could not find "{feature_id}" in this FeatureCollection')
 
-    def features(self):
+    def features(self) -> List[Feature]:
         """
         Return the feature list
 
         Returns
         -------
-        features: [GeoJSON Feature]
+        features: [Feature]
             Contained Features
         """
-        return self.feature_collection["features"]
+        return [Feature(feature, self.parent_table) for feature in self.features_list()]
+
+    def features_list(self) -> List[dict]:
+        """
+        Return the feature list as GeoJSON features
+
+        Returns
+        -------
+        features: [GeoJSON Feature]
+            Contained GeoJSON features
+        """
+        return deepcopy(self.feature_list)
+
+
+# Supporting functions for geometry filtering.
+
+
+def _geojson_to_shape(gj: dict) -> shapely.geometry.base.BaseGeometry:
+    """
+    Convert a GeoJSON dict into a shapely shape
+
+    Parameters
+    ----------
+    gj: dict
+        GeoJSON objct
+
+    Returns
+    -------
+    shp: shapely.geometry.base.BaseGeometry
+        Shapely shape for the geojson
+    """
+    return shapely.geometry.shape(gj)
+
+
+def _dl_aoi_to_shape(aoi: dl.geo.GeoContext) -> shapely.geometry.base.BaseGeometry:
+    """
+    Convert a DL AOI object into a shapely shape
+
+    Parameters
+    ----------
+    aoi: descarteslabs.geo.GeoContext
+        AOI for which we want a shapely shape
+
+    Returns
+    -------
+    shp: shapely.geometry.base.BaseGeometry
+        Shapely shape for this AOI.
+    """
+    # h/t to the Savage M for this:
+    return aoi.geometry or shapely.geometry.box(*list(aoi.bounds))
+
+
+def _to_shape(
+    aoi: Optional[
+        Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+    ] = None
+) -> Union[shapely.geometry.base.BaseGeometry, None]:
+    """
+    Attempt to convert input to a shapely object. Raise an excpetion for non-None values that
+    can't be converted.
+
+    Parameters
+    ----------
+    aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
+        Optinal aoi to convert to a shapely object
+
+    Returns
+    -------
+    shp: Union[shapely.geometry.base.BaseGeometry, None]
+        None if aoi is None, or a shapely representation of he aoi
+    """
+
+    if not aoi:
+        return None
+
+    # Convert the AOI object to a shapely object so we can
+    # perform intersections.
+    if isinstance(aoi, dict):
+        aoi = _geojson_to_shape(aoi)
+    elif issubclass(type(aoi), dl.geo.GeoContext):
+        aoi = _dl_aoi_to_shape(aoi)
+    elif issubclass(type(aoi), shapely.geometry.base.BaseGeometry):
+        return aoi
+    else:
+        raise Exception(f'"{aoi}" not recognized as an aoi')
+
+    return aoi
+
+
+def _shape_to_geojson(shp: shapely.geometry.base.BaseGeometry) -> dict:
+    """
+    Convert a shapely object into a geojson
+
+    Parameters
+    ----------
+    shp: shapely.geometry.base.BaseGeometry
+
+    Returns
+    -------
+    gj: dict
+        GeoJSON dict for this shape
+    """
+    if shp:
+        return shapely.geometry.mapping(shp)
+    return None
+
+
+class FeatureSearch:
+    """
+    A class for searching and filtering through vector features
+    """
+
+    def __init__(
+        self,
+        parent_table: str,
+        aoi: Optional[
+            Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+        ] = None,
+        filter: Optional[Properties] = None,
+    ):
+        """
+        Initialize an instance of FeatureSearch. Note instances of FeatureSearch should
+        be generated with `Table.features`
+
+        Parameters
+        ----------
+        parent_table: str
+            Table ID for the parent table.
+        """
+        self.parent_table = parent_table
+        self.aoi = _to_shape(aoi)
+        self.property_filter = filter
+
+    def intersects(
+        self, aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+    ) -> FeatureSearch:
+        """
+        Create a new FeatureSearch instance that downselects to features that
+        intersect the given AOI.
+
+        Parameters
+        ----------
+        aoi: descarteslabs.geo.GeoContext
+            AOI used to filter features by intersection
+
+        Retuns
+        -------
+        feature_search: FeatureSearch
+            New FeatureSearch instance that downselects to features in the AOI.
+        """
+        if self.aoi:
+            new_aoi = self.aoi.intersection(_to_shape(aoi))
+        else:
+            new_aoi = _to_shape(aoi)
+
+        return FeatureSearch(self.parent_table, new_aoi, self.property_filter)
+
+    def filter(self, filter: Properties) -> FeatureSearch:
+        """
+        Create a new FeatureSearch instance that downselects to features that
+        are selected by the filter.
+
+        Parameters
+        ----------
+        filter: descarteslabs.common.Properties
+            AOI used to filter features by intersection
+
+        Retuns
+        -------
+        feature_search: FeatureSearch
+            New FeatureSearch instance that downselects to features in the AOI.
+        """
+        if self.property_filter:
+            new_filter = self.property_filter & filter
+        else:
+            new_filter = filter
+
+        return FeatureSearch(self.parent_table, self.aoi, new_filter)
+
+    def collect(self) -> FeatureCollection:
+        """
+        Return a FeatureCollection with the selected items
+
+        Returns
+        -------
+        fc: FeatureCollection
+            Selected features as a FeatureCollection
+        """
+        return FeatureCollection(
+            features_query(
+                self.parent_table.parameters["id"],
+                property_filter=self.property_filter,
+                aoi=_shape_to_geojson(self.aoi),
+            ),
+            self.parent_table,
+        )
 
 
 class Table:
@@ -156,7 +460,7 @@ class Table:
         table: Table
             Table instance for the product id.
         """
-        return Table(get_product(product_id))
+        return Table(products_get(product_id))
 
     @staticmethod
     def create(product_id, *args, **kwargs) -> Table:
@@ -200,10 +504,10 @@ class Table:
         if table_exists:
             raise Exception(f'A table with id "{product_id}" already exists')
 
-        return Table(create_product(product_id, *args, **kwargs))
+        return Table(products_create(product_id, *args, **kwargs))
 
     @staticmethod
-    def list(tags: Union[List[str], None] = None) -> List[Table]:
+    def list(tags: Optional[List[str]] = None) -> List[Table]:
         """
         List available vector products
 
@@ -217,7 +521,7 @@ class Table:
         products: list[Table]
             List of table instances.
         """
-        return [Table(d) for d in list_products(tags=tags)]
+        return [Table(d) for d in products_list(tags=tags)]
 
     def __init__(self, table_parameters: Union[dict, str]):
         """
@@ -229,7 +533,7 @@ class Table:
             Dictionary of product parameters or the produt id.
         """
         if isinstance(table_parameters, str):
-            table_parameters = get_product(table_parameters)
+            table_parameters = products_get(table_parameters)
 
         self.parameters = table_parameters
 
@@ -277,6 +581,17 @@ class Table:
         """
         return self.parameters["id"]
 
+    def description(self):
+        """
+        Return the description of the table
+
+        Returns
+        -------
+        description: str
+            Table Description
+        """
+        return self.parameters["description"]
+
     def update(self, *args, **kwargs):
         """
         Update this vector product.
@@ -299,31 +614,31 @@ class Table:
             New list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         """
-        self.parameters = update_product(self.parameters["id"], *args, **kwargs)
+        self.parameters = products_update(self.parameters["id"], *args, **kwargs)
 
-    def query(
-        self, property_filter: Properties = None, aoi: dict = None
-    ) -> FeatureCollection:
+    def features(
+        self,
+        aoi: Optional[
+            Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+        ] = None,
+        filter: Optional[Properties] = None,
+    ) -> FeatureSearch:
         """
-        Query features in a vector product.
+        Return a filterable FeatureSearch object
 
         Parameters
         ----------
-        property_filter : Properties, optional
-            Property filters to filter the product with.
-        aoi : dict, optional
-            A GeoJSON Feature to filter the vector product with.
+        aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
+            Optional AOI object on which to filter features.
+        filter: Optional[Properties]
+            Optional property filte.
 
         Returns
         -------
-        features: FeatureCollection
-            A FeatureCollection of the queried features.
+        fs: FeatureSearch
+            Filteratble object
         """
-        return FeatureCollection(
-            query_features(
-                self.parameters["id"], property_filter=property_filter, aoi=aoi
-            )
-        )
+        return FeatureSearch(self, aoi=aoi, filter=filter)
 
     def add(
         self,
@@ -348,13 +663,13 @@ class Table:
         if issubclass(type(feature_collection), FeatureCollection):
             feature_collection = feature_collection.feature_collection
 
-        # Strip out any UUIDs, as they will be set by the call to add_features
+        # Strip out any UUIDs, as they will be set by the call to features_add
         new_fc = deepcopy(feature_collection)
 
         for f in new_fc["features"]:
             f.pop("uuid", None)
 
-        return FeatureCollection(add_features(self.parameters["id"], new_fc))
+        return FeatureCollection(features_add(self.parameters["id"], new_fc), self)
 
     def get_feature(self, feature_id: str) -> dict:
         """
@@ -370,7 +685,7 @@ class Table:
         dict
             A GeoJSON Feature.
         """
-        return get_feature(self.parameters["id"], feature_id)
+        return features_get(self.parameters["id"], feature_id)
 
     def update_feature(self, feature_id: str, feature: dict) -> dict:
         """
@@ -388,7 +703,7 @@ class Table:
         dict
             A GeoJSON feature.
         """
-        return update_features(self.parameters["id"], feature_id, feature)
+        return features_update(self.parameters["id"], feature_id, feature)
 
     def delete_feature(self, feature_id: str):
         """
@@ -399,7 +714,7 @@ class Table:
         feature_id : str
             ID of the feature.
         """
-        delete_features(self.parameters["id"], feature_id)
+        features_delete(self.parameters["id"], feature_id)
 
     def visualize(
         self,
@@ -443,4 +758,4 @@ class Table:
         """
         Delete this vector product. This function will disable all subsequent non-static method calls.
         """
-        delete_product(self.parameters["id"])
+        products_delete(self.parameters["id"])
