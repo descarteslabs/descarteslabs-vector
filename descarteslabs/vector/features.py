@@ -1,5 +1,5 @@
 import requests
-from descarteslabs.common.property_filtering import GenericProperties
+from descarteslabs.utils import Properties
 
 from .common import API_HOST, get_token
 
@@ -28,14 +28,14 @@ def add(product_id: str, feature_collection: dict):
     return response.json()
 
 
-def query(product_id: str, property_filter: GenericProperties = None, aoi: dict = None):
+def query(product_id: str, property_filter: Properties = None, aoi: dict = None):
     """Query features in a vector product.
 
     Parameters
     ----------
     product_id : str
         ID of the vector product.
-    property_filter : GenericProperties, optional
+    property_filter : Properties, optional
         Property filters to filter the product with.
     aoi : dict, optional
         A GeoJSON Feature to filter the vector product with.

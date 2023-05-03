@@ -3,7 +3,7 @@ import urllib.parse
 from typing import List, Optional
 
 import ipyleaflet  # type: ignore
-from descarteslabs.common.property_filtering import GenericProperties
+from descarteslabs.utils import Properties
 
 from .common import API_HOST
 
@@ -11,7 +11,7 @@ from .common import API_HOST
 def create_layer(
     product_id: str,
     name: str,
-    property_filter: Optional[GenericProperties] = None,
+    property_filter: Optional[Properties] = None,
     include_properties: Optional[List[str]] = None,
     vector_tile_layer_styles: Optional[dict] = None,
 ):
@@ -23,7 +23,7 @@ def create_layer(
         ID of the vector product.
     name : str
         Name to give to the ipyleaflet vector tile layer.
-    property_filter : GenericProperties, optional
+    property_filter : Properties, optional
         Property filter to apply to the vector tiles.
     include_properties : list of str, optional
         Properties to include in the vector tiles. These can be used for styling.

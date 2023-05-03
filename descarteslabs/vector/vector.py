@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Union
 import descarteslabs as dl
 import geojson
 import ipyleaflet
-from descarteslabs.common.property_filtering import GenericProperties
+from descarteslabs.utils import Properties
 
 from .features import add as add_features
 from .features import delete as delete_features
@@ -302,14 +302,14 @@ class Table:
         self.parameters = update_product(self.parameters["id"], *args, **kwargs)
 
     def query(
-        self, property_filter: GenericProperties = None, aoi: dict = None
+        self, property_filter: Properties = None, aoi: dict = None
     ) -> FeatureCollection:
         """
         Query features in a vector product.
 
         Parameters
         ----------
-        property_filter : GenericProperties, optional
+        property_filter : Properties, optional
             Property filters to filter the product with.
         aoi : dict, optional
             A GeoJSON Feature to filter the vector product with.
@@ -405,7 +405,7 @@ class Table:
         self,
         name: str,
         map: ipyleaflet.leaflet.Map,
-        property_filter: Optional[GenericProperties] = None,
+        property_filter: Optional[Properties] = None,
         include_properties: Optional[List[str]] = None,
         vector_tile_layer_styles: Optional[dict] = None,
     ) -> ipyleaflet.leaflet.TileLayer:
@@ -416,7 +416,7 @@ class Table:
             Name to give to the ipyleaflet vector tile layer.
         map: ipyleaflet.leaflet.Map
             Map to which to add the layer
-        property_filter : GenericProperties, optional
+        property_filter : Properties, optional
             Property filter to apply to the vector tiles.
         include_properties : list of str, optional
             Properties to include in the vector tiles. These can be used for styling.

@@ -1,7 +1,7 @@
-from descarteslabs.common import property_filtering
+from descarteslabs.utils import Properties
 
 from .vector import FeatureCollection, Table
 
-properties = property_filtering.GenericProperties()
+properties = Properties()
 
 __all__ = ["Table", "FeatureCollection", "properties", "property_filtering"]
