@@ -1,5 +1,7 @@
-from . import features, products, property_filtering, tiles
+from descarteslabs.common import property_filtering
+
+from .vector import FeatureCollection, Table
 
 properties = property_filtering.GenericProperties()
 
-__all__ = ["properties", "products", "features", "tiles", "property_filtering"]
+__all__ = ["Table", "FeatureCollection", "properties", "property_filtering"]
