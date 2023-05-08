@@ -391,19 +391,20 @@ files = [
 
 [[package]]
 name = "descarteslabs"
-version = "2.0.0rc0"
+version = "2.0.0rc3"
 description = "Descartes Labs Python Client"
 category = "main"
 optional = false
 python-versions = "~=3.7"
 files = [
-    {file = "v2.0.0rc0.zip", hash = "sha256:1088f5be6045c44febac1e295859a8589b3b5ae7547d1238187c337722f8bcfb"},
+    {file = "v2.0.0rc3.zip", hash = "sha256:aa6b3846bd6c2b6f4e37283666ac6b47caf2e45c7dabc2f5d8cc55eff61ec6c3"},
 ]
 
 [package.dependencies]
 affine = ">=2.2.2"
 blosc = ">=1.10.6"
-cachetools = ">=3.1.1,<5"
+cachetools = ">=3.1.1"
+dill = ">=0.3.6"
 dynaconf = ">=3.1.11"
 geojson = ">=2.5.0"
 imagecodecs = ">=2021.5.20"
@@ -414,7 +415,7 @@ Pillow = ">=9.2.0"
 pytz = ">=2021.1"
 requests = ">=2.28.1,<3"
 setuptools = ">=65.6.3"
-shapely = ">=1.8.1,<2"
+shapely = ">=1.8.1"
 strenum = ">=0.4.8"
 tifffile = "2021.4.8"
 tqdm = ">=4.32.1"
@@ -426,7 +427,22 @@ visualization = ["matplotlib (>=3.1.2)"]
 
 [package.source]
 type = "url"
-url = "https://github.com/descarteslabs/descarteslabs-python/archive/refs/tags/v2.0.0rc0.zip#egg=descarteslabs"
+url = "https://github.com/descarteslabs/descarteslabs-python/archive/refs/tags/v2.0.0rc3.zip#egg=descarteslabs"
+[[package]]
+name = "dill"
+version = "0.3.6"
+description = "serialize all of python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "dill-0.3.6-py3-none-any.whl", hash = "sha256:a07ffd2351b8c678dfc4a856a3005f8067aea51d6ba6c700796a4d9e280f39f0"},
+    {file = "dill-0.3.6.tar.gz", hash = "sha256:e5db55f3687856d8fbdab002ed78544e1c4559a130302693d839dfe8f93f2373"},
+]
+
+[package.extras]
+graph = ["objgraph (>=1.7.2)"]
+
 [[package]]
 name = "dynaconf"
 version = "3.1.12"
@@ -1649,4 +1665,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.8"
-content-hash = "a46eeac1bf7bfda6657f054ce797387c948f79b2174c5823e3adc8b8a13bccc7"
+content-hash = "646141234dcda63507fe06934522eba4e5a4d3019a01f620afeab6ff0f76d65b"
