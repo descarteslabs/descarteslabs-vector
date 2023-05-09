@@ -23,6 +23,16 @@ from .products import list as products_list
 from .products import update as products_update
 from .tiles import create_layer
 
+accepted_geom_types = [
+    "Point",
+    "MultiPoint",
+    "Line",
+    "MultiLine",
+    "Polygon",
+    "MultiPolygon",
+    "GeometryCollection",
+]
+
 
 class Feature:
     def __init__(self, parameters: dict, parent_table: Table):
@@ -37,6 +47,7 @@ class Feature:
             Optional parent table
         """
         assert isinstance(parameters, dict)
+        assert parameters["geometry"]["type"] in accepted_geom_types
         assert parent_table
         self.parameters = parameters
         self.parent_table = parent_table
@@ -374,6 +385,10 @@ class FeatureSearch:
         self.aoi = _to_shape(aoi)
         self.property_filter = filter
 
+        # Setting this to True means successive calls to `intersects` will "remember"
+        # previous invocations of `intersects`.
+        self.accumulate_intersections = False
+
     def intersects(
         self, aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
     ) -> FeatureSearch:
@@ -391,7 +406,7 @@ class FeatureSearch:
         feature_search: FeatureSearch
             New FeatureSearch instance that downselects to features in the AOI.
         """
-        if self.aoi:
+        if self.aoi and self.accumulate_intersections:
             new_aoi = self.aoi.intersection(_to_shape(aoi))
         else:
             new_aoi = _to_shape(aoi)
@@ -663,11 +678,17 @@ class Table:
         if issubclass(type(feature_collection), FeatureCollection):
             feature_collection = feature_collection.feature_collection
 
-        # Strip out any UUIDs, as they will be set by the call to features_add
+        # Strip out any UUIDs, as they will be set by the call to features_add, ensure that
+        # geometry types
         new_fc = deepcopy(feature_collection)
 
         for f in new_fc["features"]:
             f.pop("uuid", None)
+            geom_type = f["geometry"]["type"]
+            if geom_type not in accepted_geom_types:
+                raise Exception(
+                    f'Vector doesn\'t support the "{geom_type}" geometry type'
+                )
 
         return FeatureCollection(features_add(self.parameters["id"], new_fc), self)
 
