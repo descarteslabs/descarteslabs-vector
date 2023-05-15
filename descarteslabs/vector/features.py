@@ -2,6 +2,7 @@ import requests
 from descarteslabs.utils import Properties
 
 from .common import API_HOST, get_token
+from .util import check_response
 
 
 def add(product_id: str, feature_collection: dict):
@@ -24,7 +25,7 @@ def add(product_id: str, feature_collection: dict):
         headers={"Authorization": get_token()},
         json={"feature_collection": feature_collection},
     )
-    response.raise_for_status()
+    check_response(response, "add feature")
     return response.json()
 
 
@@ -52,7 +53,7 @@ def query(product_id: str, property_filter: Properties = None, aoi: dict = None)
         headers={"Authorization": get_token()},
         json={"filter": property_filter, "aoi": aoi},
     )
-    response.raise_for_status()
+    check_response(response, "query feature")
     return response.json()
 
 
@@ -75,7 +76,7 @@ def get(product_id: str, feature_id: str):
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
     )
-    response.raise_for_status()
+    check_response(response, "get feature")
     return response.json()
 
 
@@ -101,7 +102,7 @@ def update(product_id: str, feature_id: str, feature: dict):
         headers={"Authorization": get_token()},
         json={"feature": feature},
     )
-    response.raise_for_status()
+    check_response(response, "update feature")
     return response.json()
 
 
@@ -119,4 +120,4 @@ def delete(product_id: str, feature_id: str):
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
     )
-    response.raise_for_status()
+    check_response(response, "delete feature")

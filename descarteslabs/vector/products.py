@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 import requests
 
 from .common import API_HOST, get_token
+from .util import check_response
 
 
 def _check_tags(tags: Union[List[str], None] = None):
@@ -83,7 +84,7 @@ def create(
             }
         ),
     )
-    response.raise_for_status()
+    check_response(response, "create product")
     return response.json()
 
 
@@ -112,7 +113,7 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
         response = requests.get(
             f"{API_HOST}/products/", headers={"Authorization": get_token()}
         )
-    response.raise_for_status()
+    check_response(response, "list products")
     return response.json()
 
 
@@ -133,7 +134,7 @@ def get(product_id: str) -> dict:
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token()},
     )
-    response.raise_for_status()
+    check_response(response, "get product")
     return response.json()
 
 
@@ -188,7 +189,7 @@ def update(
             }
         ),
     )
-    response.raise_for_status()
+    check_response(response, "update product")
     return response.json()
 
 
@@ -204,4 +205,4 @@ def delete(product_id: str):
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token()},
     )
-    response.raise_for_status()
+    check_response(response, "delete product")
