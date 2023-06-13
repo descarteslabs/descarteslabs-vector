@@ -160,7 +160,9 @@ class FeatureCollection:
             self.feature_collection = feature_collection
         else:
             # ... if it were, this following line would be sufficient
-            self.feature_collection = geojson.FeatureCollection(feature_collection)
+            self.feature_collection = geojson.FeatureCollection(
+                feature_collection["features"]
+            )
 
         assert parent_table
 
