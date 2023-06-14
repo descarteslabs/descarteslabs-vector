@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "vector"
+name = "descarteslabs-vector"
 version = "0.1.0"
 description = ""
 authors = ["Descartes Labs"]
@@ -9,9 +9,9 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">= 3.8, < 3.10"
-descarteslabs = {url = "https://github.com/descarteslabs/descarteslabs-python/archive/refs/tags/v2.0.0rc3.zip#egg=descarteslabs"}
+python = ">= 3.8, < 3.12"
 ipyleaflet = "^0.17.2"
+descarteslabs = "^2"
 
 
 [build-system]
