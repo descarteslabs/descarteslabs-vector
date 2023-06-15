@@ -39,7 +39,9 @@ accepted_geom_types = [
 class Feature:
     def __init__(self, parameters: dict, parent_table: Table):
         """
-        Initialize a new Feature instance. This should not be used directly.
+        Initialize a new Feature instance.
+
+        This should not be used directly.
 
         Parameters
         ----------
@@ -56,7 +58,7 @@ class Feature:
 
     def __str__(self):
         """
-        Simple string representation
+        Simple string representation.
 
         Returns
         -------
@@ -67,7 +69,7 @@ class Feature:
 
     def __repr__(self):
         """
-        String representation
+        String representation.
 
         Returns
         -------
@@ -78,7 +80,7 @@ class Feature:
 
     def set_properties(self, properties: dict):
         """
-        Set properties for this Feature
+        Set properties for this Feature.
 
         Parameters
         ----------
@@ -89,7 +91,7 @@ class Feature:
 
     def update(self):
         """
-        Update this feature
+        Update this feature.
         """
         x = deepcopy(self.parameters)
         x.pop("uuid", None)
@@ -97,13 +99,13 @@ class Feature:
 
     def delete(self):
         """
-        Delete this feature
+        Delete this feature.
         """
         features_delete(self.parent_table.parameters["id"], self.parameters["uuid"])
 
     def properties(self) -> dict:
         """
-        Get properties
+        Get properties.
 
         Returns
         -------
@@ -114,7 +116,7 @@ class Feature:
 
     def geometry(self) -> dict:
         """
-        Get geometry
+        Get geometry.
 
         Returns
         -------
@@ -125,7 +127,7 @@ class Feature:
 
     def uuid(self) -> dict:
         """
-        Get uuid
+        Get UUID.
 
         Returns
         -------
@@ -171,7 +173,7 @@ class FeatureCollection:
 
     def __str__(self) -> str:
         """
-        Simple string representation
+        Simple string representation.
 
         Returns
         -------
@@ -183,7 +185,7 @@ class FeatureCollection:
 
     def __repr__(self) -> str:
         """
-        String representation
+        String representation.
 
         Returns
         -------
@@ -194,9 +196,10 @@ class FeatureCollection:
 
     def filter(self, filter_func: Callable[[Feature], bool]):
         """
-        Create a new FeatureCollection by filtering this one. Note this filtering is performed
-        on data that have *already* been pulled from the server. Where possible filtering
-        should be performed with a FeatureSearch instance.
+        Create a new FeatureCollection by filtering this one.
+
+        Note this filtering is performed on data that have *already* been pulled from the server. Where possible
+        filtering should be performed with a FeatureSearch instance.
 
         Parameters
         ----------
@@ -218,8 +221,9 @@ class FeatureCollection:
 
     def get_feature(self, feature_id: str):
         """
-        Get a specific feature from this FeatureCollection instance. This call requires that a
-        feature collection was generated with feature-ID's. This occures, e.g., when the
+        Get a specific feature from this FeatureCollection instance.
+
+        This call requires that a feature collection was generated with feature-IDs. This occurs, e.g., when the
         FeatureCollection instance is generated with `Table.query`.
 
         Parameters
@@ -227,7 +231,7 @@ class FeatureCollection:
         feature_id: str
             Feature ID for which we would like the feature
 
-        Retruns
+        Returns
         -------
         dict
             A GeoJSON Feature.
@@ -249,22 +253,22 @@ class FeatureCollection:
 
     def features(self) -> List[Feature]:
         """
-        Return the feature list
+        Return the feature list.
 
         Returns
         -------
-        features: [Feature]
+        features: list of Feature
             Contained Features
         """
         return [Feature(feature, self.parent_table) for feature in self.features_list()]
 
     def features_list(self) -> List[dict]:
         """
-        Return the feature list as GeoJSON features
+        Return the feature list as GeoJSON features.
 
         Returns
         -------
-        features: [GeoJSON Feature]
+        features: list of dict
             Contained GeoJSON features
         """
         return deepcopy(self.feature_list)
@@ -275,12 +279,12 @@ class FeatureCollection:
 
 def _geojson_to_shape(gj: dict) -> shapely.geometry.base.BaseGeometry:
     """
-    Convert a GeoJSON dict into a shapely shape
+    Convert a GeoJSON dict into a shapely shape.
 
     Parameters
     ----------
     gj: dict
-        GeoJSON objct
+        GeoJSON object
 
     Returns
     -------
@@ -292,7 +296,7 @@ def _geojson_to_shape(gj: dict) -> shapely.geometry.base.BaseGeometry:
 
 def _dl_aoi_to_shape(aoi: dl.geo.GeoContext) -> shapely.geometry.base.BaseGeometry:
     """
-    Convert a DL AOI object into a shapely shape
+    Convert an AOI object into a shapely shape.
 
     Parameters
     ----------
@@ -314,8 +318,9 @@ def _to_shape(
     ] = None
 ) -> Union[shapely.geometry.base.BaseGeometry, None]:
     """
-    Attempt to convert input to a shapely object. Raise an excpetion for non-None values that
-    can't be converted.
+    Attempt to convert input to a shapely object.
+
+    Raise an exception for non-None values that can't be converted.
 
     Parameters
     ----------
@@ -347,7 +352,7 @@ def _to_shape(
 
 def _shape_to_geojson(shp: shapely.geometry.base.BaseGeometry) -> dict:
     """
-    Convert a shapely object into a geojson
+    Convert a shapely object into a GeoJSON.
 
     Parameters
     ----------
@@ -377,8 +382,9 @@ class FeatureSearch:
         filter: Optional[Properties] = None,
     ):
         """
-        Initialize an instance of FeatureSearch. Note instances of FeatureSearch should
-        be generated with `Table.features`
+        Initialize an instance of FeatureSearch.
+
+        Note instances of FeatureSearch should be generated with `Table.features`.
 
         Parameters
         ----------
@@ -397,8 +403,7 @@ class FeatureSearch:
         self, aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
     ) -> FeatureSearch:
         """
-        Create a new FeatureSearch instance that downselects to features that
-        intersect the given AOI.
+        Create a new FeatureSearch instance that downselects to features that intersect the given AOI.
 
         Parameters
         ----------
@@ -419,8 +424,7 @@ class FeatureSearch:
 
     def filter(self, filter: Properties) -> FeatureSearch:
         """
-        Create a new FeatureSearch instance that downselects to features that
-        are selected by the filter.
+        Create a new FeatureSearch instance that downselects to features that are selected by the filter.
 
         Parameters
         ----------
@@ -441,7 +445,7 @@ class FeatureSearch:
 
     def collect(self) -> FeatureCollection:
         """
-        Return a FeatureCollection with the selected items
+        Return a FeatureCollection with the selected items.
 
         Returns
         -------
@@ -466,8 +470,7 @@ class Table:
     @staticmethod
     def get(product_id: str) -> Table:
         """
-        Get a Table instance associated with a product id. Raise an exception if
-        this product_id doesn't exit.
+        Get a Table instance associated with a product id. Raise an exception if this `product_id` doesn't exit.
 
         Parameters
         ----------
@@ -477,7 +480,7 @@ class Table:
         Returns
         -------
         table: Table
-            Table instance for the product id.
+            Table instance for the product ID.
         """
         return Table(products_get(product_id))
 
@@ -528,23 +531,25 @@ class Table:
     @staticmethod
     def list(tags: Optional[List[str]] = None) -> List[Table]:
         """
-        List available vector products
+        List available vector products.
 
         Parameters
         ----------
-        tags: List[str]
+        tags: list of str
             Optional list of tags a table must have to be returned.
 
         Returns
         -------
-        products: list[Table]
+        products: list of Table
             List of table instances.
         """
         return [Table(d) for d in products_list(tags=tags)]
 
     def __init__(self, table_parameters: Union[dict, str]):
         """
-        Initialize a Table instance -- users should create a Table instance via `Table.get` or `Table.create`
+        Initialize a Table instance.
+
+        Users should create a Table instance via `Table.get` or `Table.create`.
 
         Parameters
         ----------
@@ -558,7 +563,7 @@ class Table:
 
     def __repr__(self):
         """
-        Generate a string representation of this Table instance
+        Generate a string representation of this Table instance.
 
         Return
         ------
@@ -569,7 +574,7 @@ class Table:
 
     def __str__(self):
         """
-        Generate a name for this
+        Generate a name for this.
 
         Return
         ------
@@ -580,7 +585,7 @@ class Table:
 
     def name(self):
         """
-        Return the name of the table
+        Return the name of the table.
 
         Returns
         -------
@@ -591,7 +596,7 @@ class Table:
 
     def tid(self):
         """
-        Return the id of the table
+        Return the ID of the table.
 
         Returns
         -------
@@ -602,7 +607,7 @@ class Table:
 
     def description(self):
         """
-        Return the description of the table
+        Return the description of the table.
 
         Returns
         -------
@@ -643,7 +648,7 @@ class Table:
         filter: Optional[Properties] = None,
     ) -> FeatureSearch:
         """
-        Return a filterable FeatureSearch object
+        Return a filterable FeatureSearch object.
 
         Parameters
         ----------
@@ -674,8 +679,7 @@ class Table:
         Returns
         -------
         feature_collection: FeatureCollection
-            Added features. Note that this will differ from the input in that the this will have
-            feature IDs.
+            Added features. Note that this will differ from the input in that the this will have feature IDs.
         """
 
         # Extract a geojson.FeatureCollection
@@ -698,7 +702,7 @@ class Table:
 
     def get_feature(self, feature_id: str) -> dict:
         """
-        Get a specific feature from this Table instance
+        Get a specific feature from this Table instance.
 
         Parameters
         ----------
@@ -750,6 +754,8 @@ class Table:
         vector_tile_layer_styles: Optional[dict] = None,
     ) -> ipyleaflet.leaflet.TileLayer:
         """
+        Visualize this Table as an `ipyleaflet` vector tile layer.
+
         Parameters
         ----------
         name : str
@@ -761,8 +767,8 @@ class Table:
         include_properties : list of str, optional
             Properties to include in the vector tiles. These can be used for styling.
         vector_tile_layer_styles : dict, optional
-            Vector tile styles to apply. See https://ipyleaflet.readthedocs.io/en/latest/layers/vector_tile.html for more
-            details.
+            Vector tile styles to apply. See https://ipyleaflet.readthedocs.io/en/latest/layers/vector_tile.html for
+            more details.
 
         Returns
         -------
@@ -781,6 +787,8 @@ class Table:
 
     def delete(self):
         """
-        Delete this vector product. This function will disable all subsequent non-static method calls.
+        Delete this vector product.
+
+        This function will disable all subsequent non-static method calls.
         """
         products_delete(self.parameters["id"])
