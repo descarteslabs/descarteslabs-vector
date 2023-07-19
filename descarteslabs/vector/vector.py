@@ -22,6 +22,7 @@ from .products import get as products_get
 from .products import list as products_list
 from .products import update as products_update
 from .tiles import create_layer
+from .vector_exceptions import ClientException, NotFound
 
 accepted_geom_types = [
     "Point",
@@ -219,9 +220,9 @@ class FeatureCollection:
         )
         return FeatureCollection(new_fc, self.parent_table)
 
-    def get_feature(self, feature_id: str):
+    def get_feature(self, feature_id: str) -> dict:
         """
-        Get a specific feature from this FeatureCollection instance.
+        Get a specific feature from this FeatureCollection instance, and raise an exception if it isn't found.
 
         This call requires that a feature collection was generated with feature-IDs. This occurs, e.g., when the
         FeatureCollection instance is generated with `Table.query`.
@@ -249,7 +250,29 @@ class FeatureCollection:
             )
         except StopIteration:
             # Raise a more user-friendly exception
-            raise KeyError(f'Could not find "{feature_id}" in this FeatureCollection')
+            raise NotFound(f'Could not find "{feature_id}" in this FeatureCollection')
+
+    def try_get_feature(self, feature_id: str) -> Union[dict, None]:
+        """
+        Get a specific feature from this FeatureCollection instance, and return None if it isn't found.
+
+        This call requires that a feature collection was generated with feature-IDs. This occurs, e.g., when the
+        FeatureCollection instance is generated with `Table.query`.
+
+        Parameters
+        ----------
+        feature_id: str
+            Feature ID for which we would like the feature
+
+        Returns
+        -------
+        dict
+            A GeoJSON Feature.
+        """
+        try:
+            self.get_feature(feature_id)
+        except NotFound:  # All other exceptions should go to the caller.
+            return None
 
     def features(self) -> List[Feature]:
         """
@@ -345,7 +368,7 @@ def _to_shape(
     elif issubclass(type(aoi), shapely.geometry.base.BaseGeometry):
         return aoi
     else:
-        raise Exception(f'"{aoi}" not recognized as an aoi')
+        raise ClientException(f'"{aoi}" not recognized as an aoi')
 
     return aoi
 
@@ -524,7 +547,7 @@ class Table:
             table_exists = False
 
         if table_exists:
-            raise Exception(f'A table with id "{product_id}" already exists')
+            raise ClientException(f'A table with id "{product_id}" already exists')
 
         return Table(products_create(product_id, *args, **kwargs))
 
@@ -694,7 +717,7 @@ class Table:
             f.pop("uuid", None)
             geom_type = f["geometry"]["type"]
             if geom_type not in accepted_geom_types:
-                raise Exception(
+                raise ClientException(
                     f'Vector doesn\'t support the "{geom_type}" geometry type'
                 )
 
@@ -715,6 +738,25 @@ class Table:
             A GeoJSON Feature.
         """
         return features_get(self.parameters["id"], feature_id)
+
+    def try_get_feature(self, feature_id: str) -> Union[dict, None]:
+        """
+        Get a specific feature from this Table instance. If it isn't present, return None.
+
+        Parameters
+        ----------
+        feature_id: str
+            Feature ID for which we would like the feature
+
+        Retruns
+        -------
+        dict
+            A GeoJSON Feature.
+        """
+        try:
+            return features_get(self.parameters["id"], feature_id)
+        except ClientException:
+            return None
 
     def update_feature(self, feature_id: str, feature: dict) -> dict:
         """

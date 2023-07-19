@@ -4,13 +4,14 @@ import requests
 
 from .common import API_HOST, get_token
 from .util import check_response
+from .vector_exceptions import ClientException
 
 
 def _check_tags(tags: Union[List[str], None] = None):
     if tags:
         for tag in tags:
             if tag.find(",") >= 0:
-                raise Exception('tags cannot contain ","')
+                raise ClientException('tags cannot contain ","')
 
 
 def _strip_null_values(d: dict) -> dict:

@@ -2,6 +2,13 @@ import json
 
 import requests
 
+from .vector_exceptions import (
+    ClientException,
+    GenericException,
+    RedirectException,
+    ServerException,
+)
+
 
 def check_response(response: requests.Response, action: str):
     """
@@ -10,11 +17,11 @@ def check_response(response: requests.Response, action: str):
     if response.status_code == 200:
         return
 
-    status_code_class = {
-        3: "redirect",
-        4: "client",
-        5: "server",
-    }.get(response.status_code // 100, "Unknown")
+    status_code_class, exception_type = {
+        3: ("redirect", RedirectException),
+        4: ("client", ClientException),
+        5: ("server", ServerException),
+    }.get(response.status_code // 100, ("Unknown", GenericException))
 
     try:
         server_error_msg = json.loads(response.content.decode("utf-8"))["detail"]
@@ -24,4 +31,4 @@ def check_response(response: requests.Response, action: str):
 
     error_msg = f'"{action}" failed due to {status_code_class} error {server_error_msg}'
 
-    raise Exception(error_msg)
+    raise exception_type(error_msg)
