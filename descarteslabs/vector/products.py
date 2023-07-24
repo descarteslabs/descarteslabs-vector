@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 import requests
 
 from .common import API_HOST, get_token
-from .util import check_response
+from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
 
 
@@ -32,6 +32,7 @@ def _strip_null_values(d: dict) -> dict:
     return {k: v for k, v in d.items() if v is not None}
 
 
+@backoff_wrapper
 def create(
     product_id: str,
     name: str,
@@ -89,6 +90,7 @@ def create(
     return response.json()
 
 
+@backoff_wrapper
 def list(tags: Union[List[str], None] = None) -> List[dict]:
     """List vector products.
 
@@ -118,6 +120,7 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
     return response.json()
 
 
+@backoff_wrapper
 def get(product_id: str) -> dict:
     """Get a vector product.
 
@@ -139,6 +142,7 @@ def get(product_id: str) -> dict:
     return response.json()
 
 
+@backoff_wrapper
 def update(
     product_id: str,
     name: Optional[str] = None,
@@ -194,6 +198,7 @@ def update(
     return response.json()
 
 
+@backoff_wrapper
 def delete(product_id: str):
     """Delete a vector product.
 

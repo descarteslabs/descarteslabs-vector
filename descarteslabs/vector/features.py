@@ -2,9 +2,10 @@ import requests
 from descarteslabs.utils import Properties
 
 from .common import API_HOST, get_token
-from .util import check_response
+from .util import backoff_wrapper, check_response
 
 
+@backoff_wrapper
 def add(product_id: str, feature_collection: dict):
     """Add features (from a GeoJSON FeatureCollection) to a vector product.
 
@@ -29,6 +30,7 @@ def add(product_id: str, feature_collection: dict):
     return response.json()
 
 
+@backoff_wrapper
 def query(product_id: str, property_filter: Properties = None, aoi: dict = None):
     """Query features in a vector product.
 
@@ -57,6 +59,7 @@ def query(product_id: str, property_filter: Properties = None, aoi: dict = None)
     return response.json()
 
 
+@backoff_wrapper
 def get(product_id: str, feature_id: str):
     """Get a feature from a vector product.
 
@@ -80,6 +83,7 @@ def get(product_id: str, feature_id: str):
     return response.json()
 
 
+@backoff_wrapper
 def update(product_id: str, feature_id: str, feature: dict):
     """Update a feature in a vector product.
 
@@ -106,6 +110,7 @@ def update(product_id: str, feature_id: str, feature: dict):
     return response.json()
 
 
+@backoff_wrapper
 def delete(product_id: str, feature_id: str):
     """Delete a feature in a vector product.
 
