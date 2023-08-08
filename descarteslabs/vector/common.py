@@ -2,9 +2,7 @@ import os
 
 import descarteslabs as dl
 
-API_HOST = os.getenv(
-    "VECTOR_API_HOST", "https://vector.appsci-production.aws.descarteslabs.com"
-)
+API_HOST = os.getenv("VECTOR_API_HOST", "https://vector.descarteslabs.com")
 
 
 def get_token():
