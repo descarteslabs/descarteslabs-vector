@@ -1,0 +1,4 @@
+product_id = "dl:test1"
+name = "DL test table"
+description = "This is a test for DL"
+tags = ["foo", "bar"]

@@ -1,0 +1,25 @@
+{
+  "filter": {
+    "and": [
+      {
+        "or": [
+          {
+            "eq": {
+              "foo": "bar"
+            }
+          },
+          {
+            "ne": {
+              "bar": "foo"
+            }
+          }
+        ]
+      },
+      {
+        "like": {
+          "name": "%oak-ridge%"
+        }
+      }
+    ]
+  }
+}
