@@ -433,7 +433,7 @@ class FeatureSearch:
         aoi: descarteslabs.geo.GeoContext
             AOI used to filter features by intersection
 
-        Retuns
+        Returns
         -------
         feature_search: FeatureSearch
             New FeatureSearch instance that downselects to features in the AOI.
@@ -454,7 +454,7 @@ class FeatureSearch:
         filter: descarteslabs.common.Properties
             AOI used to filter features by intersection
 
-        Retuns
+        Returns
         -------
         feature_search: FeatureSearch
             New FeatureSearch instance that downselects to features in the AOI.
