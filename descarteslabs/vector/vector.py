@@ -531,6 +531,8 @@ class Table:
         owners : list of str, optional
             A list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
+        model : VectorBaseModel, optional
+            A model that provides a user provided schema for the vector table.
 
         Returns
         -------

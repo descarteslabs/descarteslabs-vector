@@ -1,8 +1,10 @@
+import json
 from typing import List, Optional, Union
 
 import requests
 
 from .common import API_HOST, get_token
+from .models import GenericFeatureBaseModel, VectorBaseModel
 from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
 
@@ -41,6 +43,7 @@ def create(
     readers: Optional[List[str]] = None,
     writers: Optional[List[str]] = None,
     owners: Optional[List[str]] = None,
+    model: Optional[VectorBaseModel] = GenericFeatureBaseModel,
 ) -> dict:
     """Create a vector product.
 
@@ -63,6 +66,8 @@ def create(
     owners : list of str, optional
         A list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
+    model : VectorBaseModel, optional
+        A json schema describing the table
 
     Returns
     -------
@@ -70,21 +75,22 @@ def create(
         Details of the created vector product.
     """
     _check_tags(tags)
-
+    request_json = _strip_null_values(
+        {
+            "id": product_id,
+            "name": name,
+            "description": description,
+            "tags": tags,
+            "readers": readers,
+            "writers": writers,
+            "owners": owners,
+            "model": json.dumps(model.model_json_schema()),
+        }
+    )
     response = requests.post(
         f"{API_HOST}/products/",
         headers={"Authorization": get_token()},
-        json=_strip_null_values(
-            {
-                "id": product_id,
-                "name": name,
-                "description": description,
-                "tags": tags,
-                "readers": readers,
-                "writers": writers,
-                "owners": owners,
-            }
-        ),
+        json=request_json,
     )
     check_response(response, "create product")
     return response.json()
