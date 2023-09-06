@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
-from typing import Callable, List, Optional, Union
+from typing import List, Optional, Union
 
 import descarteslabs as dl
-import geojson
+import geopandas as gpd
 import ipyleaflet
 import shapely
 from descarteslabs.utils import Properties
@@ -22,7 +21,7 @@ from .products import get as products_get
 from .products import list as products_list
 from .products import update as products_update
 from .tiles import create_layer
-from .vector_exceptions import ClientException, NotFound
+from .vector_exceptions import ClientException
 
 accepted_geom_types = [
     "Point",
@@ -35,267 +34,6 @@ accepted_geom_types = [
     "MultiPolygon",
     "GeometryCollection",
 ]
-
-
-class Feature:
-    def __init__(self, parameters: dict, parent_table: Table):
-        """
-        Initialize a new Feature instance.
-
-        This should not be used directly.
-
-        Parameters
-        ----------
-        parameters: dict
-            JSON representation of this feature.
-        parent_table: Table
-            Optional parent table
-        """
-        assert isinstance(parameters, dict)
-        assert parameters["geometry"]["type"] in accepted_geom_types
-        assert parent_table
-        self.parameters = parameters
-        self.parent_table = parent_table
-
-    def __str__(self):
-        """
-        Simple string representation.
-
-        Returns
-        -------
-        s: str
-            Simple string representation
-        """
-        return f"{self.parent_table}:{self.parameters['uuid']}"
-
-    def __repr__(self):
-        """
-        String representation.
-
-        Returns
-        -------
-        r: str
-            String representation
-        """
-        return f"{self.parent_table}:{json.dumps(self.parameters, sort_keys=True)}"
-
-    def set_properties(self, properties: dict):
-        """
-        Set properties for this Feature.
-
-        Parameters
-        ----------
-        properties: dict
-            New properties for this feature
-        """
-        self.parameters["properties"] = properties
-
-    def update(self):
-        """
-        Update this feature.
-        """
-        x = deepcopy(self.parameters)
-        x.pop("uuid", None)
-        features_update(self.parent_table.parameters["id"], self.parameters["uuid"], x)
-
-    def delete(self):
-        """
-        Delete this feature.
-        """
-        features_delete(self.parent_table.parameters["id"], self.parameters["uuid"])
-
-    def properties(self) -> dict:
-        """
-        Get properties.
-
-        Returns
-        -------
-        properties: dict
-            Feature properties
-        """
-        return deepcopy(self.parameters["properties"])
-
-    def geometry(self) -> dict:
-        """
-        Get geometry.
-
-        Returns
-        -------
-        geometry: dict
-            Feature geometry
-        """
-        return deepcopy(self.parameters["geometry"])
-
-    def uuid(self) -> dict:
-        """
-        Get UUID.
-
-        Returns
-        -------
-        uuid: uuid
-            Feature UUID
-        """
-        return self.parameters["uuid"]
-
-
-class FeatureCollection:
-    """
-    A class for creating and interacting with collections of features.
-    """
-
-    def __init__(
-        self,
-        feature_collection: Union[dict, geojson.FeatureCollection],
-        parent_table: Table,
-    ):
-        """
-        Initialize a FeatureCollection instance.
-
-        Parameters
-        ----------
-        feature_collection: Union[GeoJSON.FeatureCollection, dict]
-            GeoJSON feature collection
-        parent_table: Table
-            Optional Table instance for parent table, if there is one.
-        """
-        # The geojson.FeatureCollection constructor is not idempotent ...
-        if issubclass(type(feature_collection), geojson.FeatureCollection):
-            self.feature_collection = feature_collection
-        else:
-            # ... if it were, this following line would be sufficient
-            self.feature_collection = geojson.FeatureCollection(
-                feature_collection["features"]
-            )
-
-        assert parent_table
-
-        self.parent_table = parent_table
-        self.feature_list = self.feature_collection["features"]
-
-    def __str__(self) -> str:
-        """
-        Simple string representation.
-
-        Returns
-        -------
-        str: str
-            String representation
-        """
-        num_features = len(self.feature_collection["features"])
-        return f"{num_features} from {self.parent_table}"
-
-    def __repr__(self) -> str:
-        """
-        String representation.
-
-        Returns
-        -------
-        json: str
-            JSON represetnation of this instance
-        """
-        return json.dumps(self.feature_collection, sort_keys=True)
-
-    def filter(self, filter_func: Callable[[Feature], bool]):
-        """
-        Create a new FeatureCollection by filtering this one.
-
-        Note this filtering is performed on data that have *already* been pulled from the server. Where possible
-        filtering should be performed with a FeatureSearch instance.
-
-        Parameters
-        ----------
-        filter_func: Callable[[Feature], bool]
-            Preciate for selecting features.
-
-        Returns
-        -------
-        filtered: FeatureCollection
-            New FeatureCollection instance derived from filtering this one.
-        """
-        new_fc = deepcopy(self.feature_collection)
-        new_fc["features"] = list(
-            filter(
-                lambda f: filter_func(Feature(f, self.parent_table)), new_fc["features"]
-            )
-        )
-        return FeatureCollection(new_fc, self.parent_table)
-
-    def get_feature(self, feature_id: str) -> dict:
-        """
-        Get a specific feature from this FeatureCollection instance, and raise an exception if it isn't found.
-
-        This call requires that a feature collection was generated with feature-IDs. This occurs, e.g., when the
-        FeatureCollection instance is generated with `Table.query`.
-
-        Parameters
-        ----------
-        feature_id: str
-            Feature ID for which we would like the feature
-
-        Returns
-        -------
-        dict
-            A GeoJSON Feature.
-        """
-
-        try:
-            return Feature(
-                next(
-                    filter(
-                        lambda x: x["uuid"] == feature_id,
-                        self.feature_list,
-                    )
-                ),
-                self.parent_table,
-            )
-        except StopIteration:
-            # Raise a more user-friendly exception
-            raise NotFound(f'Could not find "{feature_id}" in this FeatureCollection')
-
-    def try_get_feature(self, feature_id: str) -> Union[dict, None]:
-        """
-        Get a specific feature from this FeatureCollection instance, and return None if it isn't found.
-
-        This call requires that a feature collection was generated with feature-IDs. This occurs, e.g., when the
-        FeatureCollection instance is generated with `Table.query`.
-
-        Parameters
-        ----------
-        feature_id: str
-            Feature ID for which we would like the feature
-
-        Returns
-        -------
-        dict
-            A GeoJSON Feature.
-        """
-        try:
-            self.get_feature(feature_id)
-        except NotFound:  # All other exceptions should go to the caller.
-            return None
-
-    def features(self) -> List[Feature]:
-        """
-        Return the feature list.
-
-        Returns
-        -------
-        features: list of Feature
-            Contained Features
-        """
-        return [Feature(feature, self.parent_table) for feature in self.features_list()]
-
-    def features_list(self) -> List[dict]:
-        """
-        Return the feature list as GeoJSON features.
-
-        Returns
-        -------
-        features: list of dict
-            Contained GeoJSON features
-        """
-        return deepcopy(self.feature_list)
-
 
 # Supporting functions for geometry filtering.
 
@@ -466,22 +204,19 @@ class FeatureSearch:
 
         return FeatureSearch(self.parent_table, self.aoi, new_filter)
 
-    def collect(self) -> FeatureCollection:
+    def collect(self) -> gpd.GeoDataFrame:
         """
-        Return a FeatureCollection with the selected items.
+        Return a GeoPandas dataframe with the selected items.
 
         Returns
         -------
-        fc: FeatureCollection
-            Selected features as a FeatureCollection
+        gpd.GeoDataFrame:
+            A GeoPandas dataframe.
         """
-        return FeatureCollection(
-            features_query(
-                self.parent_table.parameters["id"],
-                property_filter=self.property_filter,
-                aoi=_shape_to_geojson(self.aoi),
-            ),
-            self.parent_table,
+        return features_query(
+            self.parent_table.parameters["id"],
+            property_filter=self.property_filter,
+            aoi=_shape_to_geojson(self.aoi),
         )
 
 
@@ -691,41 +426,25 @@ class Table:
 
     def add(
         self,
-        feature_collection: Union[dict, FeatureCollection],
-    ) -> FeatureCollection:
+        dataframe: gpd.GeoDataFrame,
+    ) -> gpd.GeoDataFrame:
         """
-        Add a feature collection to this table.
+        Add a GeoPandas dataframe to this table.
 
         Parameters
         ----------
-        feature_collection: Union[dict, geojson.FeatureCollection, FeatureCollection]
-            Collection of features to add to this table.
+        dataframe:gpd.GeoDataFrame
+            GeoPandas dataframe to add to this table.
 
         Returns
         -------
-        feature_collection: FeatureCollection
-            Added features. Note that this will differ from the input in that the this will have feature IDs.
+        dataframe: gpd.GeoDataFrame
+            Added features. Note that this will differ from the input in that UUIDs have been attributed.
         """
 
-        # Extract a geojson.FeatureCollection
-        if issubclass(type(feature_collection), FeatureCollection):
-            feature_collection = feature_collection.feature_collection
+        return features_add(self.parameters["id"], dataframe)
 
-        # Strip out any UUIDs, as they will be set by the call to features_add, ensure that
-        # geometry types
-        new_fc = deepcopy(feature_collection)
-
-        for f in new_fc["features"]:
-            f.pop("uuid", None)
-            geom_type = f["geometry"]["type"]
-            if geom_type not in accepted_geom_types:
-                raise ClientException(
-                    f'Vector doesn\'t support the "{geom_type}" geometry type'
-                )
-
-        return FeatureCollection(features_add(self.parameters["id"], new_fc), self)
-
-    def get_feature(self, feature_id: str) -> dict:
+    def get_feature(self, feature_id: str) -> gpd.GeoDataFrame:
         """
         Get a specific feature from this Table instance.
 
@@ -736,8 +455,8 @@ class Table:
 
         Retruns
         -------
-        dict
-            A GeoJSON Feature.
+        gpd.GeoDataFrame
+            A GeoPandas dataframe.
         """
         return features_get(self.parameters["id"], feature_id)
 
@@ -752,15 +471,17 @@ class Table:
 
         Retruns
         -------
-        dict
-            A GeoJSON Feature.
+        gpd.GeoDataFrame
+            A GeoPandas dataframe.
         """
         try:
             return features_get(self.parameters["id"], feature_id)
         except ClientException:
             return None
 
-    def update_feature(self, feature_id: str, feature: dict) -> dict:
+    def update_feature(
+        self, feature_id: str, dataframe: gpd.GeoDataFrame
+    ) -> gpd.GeoDataFrame:
         """
         Update a feature in a vector product.
 
@@ -769,14 +490,14 @@ class Table:
         feature_id : str
             ID of the feature.
         feature : dict
-            The GeoJSON Feature to replace the feature with.
+            The GeoPandas dataframe to replace the feature with.
 
         Returns
         -------
-        dict
-            A GeoJSON feature.
+        gpd.GeoDataFrame
+            A GeoPandas dataframe.
         """
-        return features_update(self.parameters["id"], feature_id, feature)
+        return features_update(self.parameters["id"], feature_id, dataframe)
 
     def delete_feature(self, feature_id: str):
         """

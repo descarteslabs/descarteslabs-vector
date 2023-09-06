@@ -1,3 +1,6 @@
+import io
+
+import geopandas as gpd
 import requests
 from descarteslabs.utils import Properties
 
@@ -6,32 +9,48 @@ from .util import backoff_wrapper, check_response
 
 
 @backoff_wrapper
-def add(product_id: str, feature_collection: dict):
-    """Add features (from a GeoJSON FeatureCollection) to a vector product.
+def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Add features to a vector product.
 
     Parameters
     ----------
     product_id : str
         ID of the vector product.
-    feature_collection : dict
-        The GeoJSON FeatureCollection to add.
+    data : gpd.GeoDataFrame
+        The GeoPandas dataframe to add.
 
     Returns
     -------
-    dict
-        A GeoJSON FeatureCollection of the added features.
+    gpd.GeoDataFrame
+        A GeoPandas dataframe of the added features.
     """
+
+    if not isinstance(dataframe, gpd.GeoDataFrame):
+        raise TypeError(f"Unsupported data type {type(dataframe)}")
+
+    buffer = io.BytesIO()
+    dataframe.to_parquet(buffer, index=False)
+    buffer.seek(0)
+
+    files = {"file": ("data.parquet", buffer, "application/octet-stream")}
+
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features",
         headers={"Authorization": get_token()},
-        json={"feature_collection": feature_collection},
+        files=files,
     )
+
     check_response(response, "add feature")
-    return response.json()
+
+    buffer = io.BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper
-def query(product_id: str, property_filter: Properties = None, aoi: dict = None):
+def query(
+    product_id: str, property_filter: Properties = None, aoi: dict = None
+) -> gpd.GeoDataFrame:
     """Query features in a vector product.
 
     Parameters
@@ -45,8 +64,8 @@ def query(product_id: str, property_filter: Properties = None, aoi: dict = None)
 
     Returns
     -------
-    dict
-        A GeoJSON FeatureCollection of the queried features.
+    gpd.GeoDataFrame
+        A GeoPandas dataframe.
     """
     if property_filter is not None:
         property_filter = property_filter.serialize()
@@ -56,11 +75,14 @@ def query(product_id: str, property_filter: Properties = None, aoi: dict = None)
         json={"filter": property_filter, "aoi": aoi},
     )
     check_response(response, "query feature")
-    return response.json()
+
+    buffer = io.BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper
-def get(product_id: str, feature_id: str):
+def get(product_id: str, feature_id: str) -> gpd.GeoDataFrame:
     """Get a feature from a vector product.
 
     Parameters
@@ -72,19 +94,25 @@ def get(product_id: str, feature_id: str):
 
     Returns
     -------
-    dict
-        A GeoJSON Feature.
+    gpd.GeoDataFrame
+        A GeoPandas dataframe.
     """
     response = requests.get(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
     )
+
     check_response(response, "get feature")
-    return response.json()
+
+    buffer = io.BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper
-def update(product_id: str, feature_id: str, feature: dict):
+def update(
+    product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame
+) -> gpd.GeoDataFrame:
     """Update a feature in a vector product.
 
     Parameters
@@ -93,21 +121,38 @@ def update(product_id: str, feature_id: str, feature: dict):
         ID of the vector product.
     feature_id : str
         ID of the feature.
-    feature : dict
-        The GeoJSON Feature to replace the feature with.
+    dataframe : gpd.GeoDataFrame
+        A GeoPandas dataframe to replace the feature with.
 
     Returns
     -------
-    dict
-        A GeoJSON feature.
+    gpd.GeoDataFrame
+        A GeoPandas dataframe of the modified feature.
     """
+
+    if not isinstance(dataframe, gpd.GeoDataFrame):
+        raise TypeError(f"Unsupported data type {type(dataframe)}")
+
+    if dataframe.shape[0] != 1:
+        raise ValueError("Only 1 row can be updated!")
+
+    buffer = io.BytesIO()
+    dataframe.to_parquet(buffer, index=False)
+    buffer.seek(0)
+
+    files = {"file": ("data.parquet", buffer, "application/octet-stream")}
+
     response = requests.put(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
-        json={"feature": feature},
+        files=files,
     )
+
     check_response(response, "update feature")
-    return response.json()
+
+    buffer = io.BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper
@@ -121,8 +166,10 @@ def delete(product_id: str, feature_id: str):
     feature_id : str
         ID of the feature.
     """
+
     response = requests.delete(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
     )
+
     check_response(response, "delete feature")

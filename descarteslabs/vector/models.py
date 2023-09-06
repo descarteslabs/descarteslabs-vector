@@ -9,7 +9,6 @@ class VectorBaseModel(BaseModel):
         default_factory=uuid4,
         json_schema_extra={"primary_key": True},
     )
-    product_id: str
 
 
 class GeometryBaseModel(VectorBaseModel):
