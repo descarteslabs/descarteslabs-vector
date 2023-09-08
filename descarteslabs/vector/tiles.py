@@ -2,10 +2,10 @@ import json
 import urllib.parse
 from typing import List, Optional
 
-import ipyleaflet  # type: ignore
 from descarteslabs.utils import Properties
 
 from .common import API_HOST
+from .layers import DLVectorTileLayer
 
 
 def create_layer(
@@ -33,7 +33,7 @@ def create_layer(
 
     Returns
     -------
-    ipyleaflet.VectorTileLayer
+    DLVectorTileLayer
         Vector tile layer that can be added to an ipyleaflet map.
     """
     # Initialize vector tile layer styles if no styles are provided
@@ -53,7 +53,7 @@ def create_layer(
     )  # TODO: Strip null values
 
     # Create an ipyleaflet vector tile layer and return it
-    lyr = ipyleaflet.VectorTileLayer(
+    lyr = DLVectorTileLayer(
         url=f"{API_HOST}/products/{product_id}/tiles/{{z}}/{{x}}/{{y}}?{query_params}",
         name=name,
         vector_tile_layer_styles=vector_tile_layer_styles,
