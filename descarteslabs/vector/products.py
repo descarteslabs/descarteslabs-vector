@@ -87,6 +87,7 @@ def create(
             "model": json.dumps(model.model_json_schema()),
         }
     )
+
     response = requests.post(
         f"{API_HOST}/products/",
         headers={"Authorization": get_token()},
@@ -197,7 +198,7 @@ def update(
                 "readers": readers,
                 "writers": writers,
                 "owners": owners,
-            }
+            },
         ),
     )
     check_response(response, "update product")

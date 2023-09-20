@@ -141,6 +141,7 @@ class FeatureSearch:
             Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
         ] = None,
         filter: Optional[Properties] = None,
+        columns: Optional[List[str]] = None,
     ):
         """
         Initialize an instance of FeatureSearch.
@@ -155,13 +156,16 @@ class FeatureSearch:
         self.parent_table = parent_table
         self.aoi = _to_shape(aoi)
         self.property_filter = filter
+        self.columns = columns
 
         # Setting this to True means successive calls to `intersects` will "remember"
         # previous invocations of `intersects`.
         self.accumulate_intersections = False
 
     def intersects(
-        self, aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+        self,
+        aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry],
+        columns: Optional[List[str]] = None,
     ) -> FeatureSearch:
         """
         Create a new FeatureSearch instance that downselects to features that intersect the given AOI.
@@ -170,6 +174,8 @@ class FeatureSearch:
         ----------
         aoi: descarteslabs.geo.GeoContext
             AOI used to filter features by intersection
+        columns: Optional[List[str]]
+            Optional list of column names.
 
         Returns
         -------
@@ -181,9 +187,11 @@ class FeatureSearch:
         else:
             new_aoi = _to_shape(aoi)
 
-        return FeatureSearch(self.parent_table, new_aoi, self.property_filter)
+        return FeatureSearch(self.parent_table, new_aoi, self.property_filter, columns)
 
-    def filter(self, filter: Properties) -> FeatureSearch:
+    def filter(
+        self, filter: Properties, columns: Optional[List[str]] = None
+    ) -> FeatureSearch:
         """
         Create a new FeatureSearch instance that downselects to features that are selected by the filter.
 
@@ -191,6 +199,8 @@ class FeatureSearch:
         ----------
         filter: descarteslabs.common.Properties
             AOI used to filter features by intersection
+        columns: Optional[List[str]]
+            Optional list of column names.
 
         Returns
         -------
@@ -202,7 +212,7 @@ class FeatureSearch:
         else:
             new_filter = filter
 
-        return FeatureSearch(self.parent_table, self.aoi, new_filter)
+        return FeatureSearch(self.parent_table, self.aoi, new_filter, columns)
 
     def collect(self) -> gpd.GeoDataFrame:
         """
@@ -217,6 +227,7 @@ class FeatureSearch:
             self.parent_table.parameters["id"],
             property_filter=self.property_filter,
             aoi=_shape_to_geojson(self.aoi),
+            columns=self.columns,
         )
 
 
@@ -224,6 +235,23 @@ class Table:
     """
     A class for creating and interacting with vector products.
     """
+
+    def __init__(self, table_parameters: Union[dict, str]):
+        """
+        Initialize a Table instance.
+
+        Users should create a Table instance via `Table.get` or `Table.create`.
+
+        Parameters
+        ----------
+        product_parameters: Union[dict, str]
+            Dictionary of product parameters or the produt id.
+        """
+        if isinstance(table_parameters, str):
+            table_parameters = products_get(table_parameters)
+
+        for k, v in table_parameters.items():
+            setattr(self, f"_{k}", v)
 
     @staticmethod
     def get(product_id: str) -> Table:
@@ -305,21 +333,216 @@ class Table:
         """
         return [Table(d) for d in products_list(tags=tags)]
 
-    def __init__(self, table_parameters: Union[dict, str]):
+    @property
+    def id(self) -> str:
         """
-        Initialize a Table instance.
+        Return the ID of the table.
 
-        Users should create a Table instance via `Table.get` or `Table.create`.
-
-        Parameters
-        ----------
-        product_parameters: Union[dict, str]
-            Dictionary of product parameters or the produt id.
+        Returns
+        -------
+        id: str
+            Table ID
         """
-        if isinstance(table_parameters, str):
-            table_parameters = products_get(table_parameters)
+        return self._id
 
-        self.parameters = table_parameters
+    @property
+    def name(self) -> str:
+        """
+        Return the name of the table.
+
+        Returns
+        -------
+        name: str
+            Table name
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """
+        Set the name of the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, str):
+            self._name = value
+        else:
+            raise ValueError("Table 'name' must be of type 'str'")
+
+    @property
+    def description(self) -> str:
+        """
+        Return the description of the table.
+
+        Returns
+        -------
+        None
+        """
+        return self._description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        """
+        Set the description of the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, str):
+            self._description = value
+        else:
+            raise ValueError("Table 'description' must be of type 'str'")
+
+    @property
+    def tags(self) -> list:
+        """
+        Return the tags of the table.
+
+        Returns
+        -------
+        tags: list
+            Table tags
+        """
+        return self._tags
+
+    @tags.setter
+    def tags(self, value: str) -> None:
+        """
+        Set the tags for the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, list):
+            self._tags = value
+        else:
+            raise ValueError("Table 'tags' must be of type 'list'")
+
+    @property
+    def readers(self) -> list:
+        """
+        Return the readers of the table.
+
+        Returns
+        -------
+        readers: list
+            Table readers
+        """
+        return self._readers
+
+    @readers.setter
+    def readers(self, value: list) -> None:
+        """
+        Set the readers for the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, list):
+            self._readers = value
+        else:
+            raise ValueError("Table 'readers' must be of type 'list'")
+
+    @property
+    def writers(self) -> list:
+        """
+        Return the writers of the table.
+
+        Returns
+        -------
+        writers: list
+            Table writers
+        """
+        return self._writers
+
+    @writers.setter
+    def writers(self, value: list) -> None:
+        """
+        Set the writers for the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, list):
+            self._writers = value
+        else:
+            raise ValueError("Table 'writers' must be of type 'list'")
+
+    @property
+    def owners(self) -> list:
+        """
+        Return the owners of the table.
+
+        Returns
+        -------
+        owners: list
+            Table owners
+        """
+        return self._owners
+
+    @owners.setter
+    def owners(self, value: list) -> None:
+        """
+        Set the owners for the table.
+
+        Returns
+        -------
+        None
+        """
+        if isinstance(value, list):
+            self._owners = value
+        else:
+            raise ValueError("Table 'owners' must be of type 'list'")
+
+    @property
+    def model(self) -> dict:
+        """
+        Return the model of the table.
+
+        Returns
+        -------
+        model: dict
+            Table model
+        """
+        return json.loads(self._model)
+
+    @property
+    def parameters(self) -> dict:
+        """
+        Return the table parameters as dictionary.
+
+        Returns
+        -------
+        parameters: dict
+            Table parameters
+        """
+
+        keys = [
+            "_id",
+            "_name",
+            "_description",
+            "_tags",
+            "_readers",
+            "_writers",
+            "_owners",
+            "_model",
+        ]
+
+        params = {}
+
+        for k in keys:
+            if k == "_model":
+                params[k.lstrip("_")] = json.loads(self.__dict__[k])
+            else:
+                params[k.lstrip("_")] = self.__dict__[k]
+
+        return params
 
     def __repr__(self):
         """
@@ -341,44 +564,11 @@ class Table:
         name: str
             Table name
         """
-        return self.parameters["name"]
+        return self.name
 
-    def name(self):
+    def save(self) -> None:
         """
-        Return the name of the table.
-
-        Returns
-        -------
-        name: str
-            Table name
-        """
-        return self.parameters["name"]
-
-    def tid(self):
-        """
-        Return the ID of the table.
-
-        Returns
-        -------
-        tid: str
-            Table ID
-        """
-        return self.parameters["id"]
-
-    def description(self):
-        """
-        Return the description of the table.
-
-        Returns
-        -------
-        description: str
-            Table Description
-        """
-        return self.parameters["description"]
-
-    def update(self, *args, **kwargs):
-        """
-        Update this vector product.
+        Save/update this vector product.
 
         Parameters
         ----------
@@ -398,7 +588,15 @@ class Table:
             New list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         """
-        self.parameters = products_update(self.parameters["id"], *args, **kwargs)
+        products_update(
+            product_id=self.id,
+            name=self.name,
+            description=self.description,
+            tags=self.tags,
+            readers=self.readers,
+            writers=self.writers,
+            owners=self.owners,
+        )
 
     def features(
         self,
@@ -406,6 +604,7 @@ class Table:
             Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
         ] = None,
         filter: Optional[Properties] = None,
+        columns: Optional[List[str]] = None,
     ) -> FeatureSearch:
         """
         Return a filterable FeatureSearch object.
@@ -415,14 +614,16 @@ class Table:
         aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
             Optional AOI object on which to filter features.
         filter: Optional[Properties]
-            Optional property filte.
+            Optional property filter.
+        columns: Optional[List[str]]
+            Optional list of column names.
 
         Returns
         -------
         fs: FeatureSearch
             Filteratble object
         """
-        return FeatureSearch(self, aoi=aoi, filter=filter)
+        return FeatureSearch(self, aoi=aoi, filter=filter, columns=columns)
 
     def add(
         self,
@@ -442,7 +643,7 @@ class Table:
             Added features. Note that this will differ from the input in that UUIDs have been attributed.
         """
 
-        return features_add(self.parameters["id"], dataframe)
+        return features_add(self.id, dataframe)
 
     def get_feature(self, feature_id: str) -> gpd.GeoDataFrame:
         """
@@ -458,7 +659,7 @@ class Table:
         gpd.GeoDataFrame
             A GeoPandas dataframe.
         """
-        return features_get(self.parameters["id"], feature_id)
+        return features_get(self.id, feature_id)
 
     def try_get_feature(self, feature_id: str) -> Union[dict, None]:
         """
@@ -475,7 +676,7 @@ class Table:
             A GeoPandas dataframe.
         """
         try:
-            return features_get(self.parameters["id"], feature_id)
+            return features_get(self.id, feature_id)
         except ClientException:
             return None
 
@@ -497,9 +698,9 @@ class Table:
         gpd.GeoDataFrame
             A GeoPandas dataframe.
         """
-        return features_update(self.parameters["id"], feature_id, dataframe)
+        return features_update(self.id, feature_id, dataframe)
 
-    def delete_feature(self, feature_id: str):
+    def delete_feature(self, feature_id: str) -> None:
         """
         Delete a feature in a vector product.
 
@@ -508,7 +709,7 @@ class Table:
         feature_id : str
             ID of the feature.
         """
-        features_delete(self.parameters["id"], feature_id)
+        features_delete(self.id, feature_id)
 
     def visualize(
         self,
@@ -541,7 +742,7 @@ class Table:
             Vector tile layer that can be added to an ipyleaflet map.
         """
         lyr = create_layer(
-            self.parameters["id"],
+            self.id,
             name,
             property_filter=property_filter,
             include_properties=include_properties,
@@ -550,10 +751,10 @@ class Table:
         map.add_layer(lyr)
         return lyr
 
-    def delete(self):
+    def delete(self) -> None:
         """
         Delete this vector product.
 
         This function will disable all subsequent non-static method calls.
         """
-        products_delete(self.parameters["id"])
+        products_delete(self.id)

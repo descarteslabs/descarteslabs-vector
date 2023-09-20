@@ -49,7 +49,10 @@ def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 @backoff_wrapper
 def query(
-    product_id: str, property_filter: Properties = None, aoi: dict = None
+    product_id: str,
+    property_filter: Properties = None,
+    aoi: dict = None,
+    columns: list = None,
 ) -> gpd.GeoDataFrame:
     """Query features in a vector product.
 
@@ -61,6 +64,8 @@ def query(
         Property filters to filter the product with.
     aoi : dict, optional
         A GeoJSON Feature to filter the vector product with.
+    columns : list, optional
+        Optional list of column names.
 
     Returns
     -------
@@ -72,7 +77,7 @@ def query(
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features/query",
         headers={"Authorization": get_token()},
-        json={"filter": property_filter, "aoi": aoi},
+        json={"filter": property_filter, "aoi": aoi, "columns": columns},
     )
     check_response(response, "query feature")
 
