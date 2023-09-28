@@ -746,7 +746,7 @@ class Table:
             name,
             property_filter=property_filter,
             include_properties=include_properties,
-            vector_tile_layer_styles=vector_tile_layer_styles,
+            vector_tile_layer_styles={self.id: vector_tile_layer_styles},
         )
         map.add_layer(lyr)
         return lyr
