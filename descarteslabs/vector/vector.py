@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 import descarteslabs as dl
 import geopandas as gpd
@@ -13,6 +13,7 @@ from descarteslabs.utils import Properties
 from .features import add as features_add
 from .features import delete as features_delete
 from .features import get as features_get
+from .features import join as features_join
 from .features import query as features_query
 from .features import update as features_update
 from .products import create as products_create
@@ -129,114 +130,145 @@ def _shape_to_geojson(shp: shapely.geometry.base.BaseGeometry) -> dict:
     return None
 
 
-class FeatureSearch:
+class TableOptions:
     """
-    A class for searching and filtering through vector features
+    A class controling Table options and parameters.
     """
 
     def __init__(
         self,
-        parent_table: str,
+        product_id: str,
         aoi: Optional[
             Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
         ] = None,
-        filter: Optional[Properties] = None,
-        columns: Optional[List[str]] = None,
+        property_filter: Optional[Properties] = None,
+        columns: Optional[List[str]] = [],
     ):
         """
-        Initialize an instance of FeatureSearch.
-
-        Note instances of FeatureSearch should be generated with `Table.features`.
+        Initialize an instance of TableOptions.
 
         Parameters
         ----------
-        parent_table: str
-            Table ID for the parent table.
+        product_id: str
+            Product ID of Vector Table.
+        aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
+            AOI associated with this TableOptions.
+        property_filter: Optional[Properties]
+            Property filter associated with this TableOptions.
+        columns: Optional[List[str]]
+            List of columns to include in each query.
         """
-        self.parent_table = parent_table
-        self.aoi = _to_shape(aoi)
-        self.property_filter = filter
-        self.columns = columns
+        self._product_id = product_id
+        self._aoi = _to_shape(aoi)
+        self._property_filter = property_filter
+        self._columns = columns
 
-        # Setting this to True means successive calls to `intersects` will "remember"
-        # previous invocations of `intersects`.
-        self.accumulate_intersections = False
+    @property
+    def product_id(self) -> str:
+        """
+        Return the product ID associated with this TableOptions.
+        Returns
+        -------
+        str
+        """
+        return self._product_id
 
-    def intersects(
+    @product_id.setter
+    def product_id(self, product_id: str) -> None:
+        """
+        Set the product ID associated with this TableOptions.
+        Returns
+        -------
+        str
+        """
+        if not isinstance(product_id, str):
+            raise TypeError("'product_id' must be of type <str>!")
+        self._product_id = product_id
+
+    @property
+    def aoi(self) -> shapely.geometry.shape:
+        """
+        Return the aoi associated with this TableOptions.
+
+        Returns
+        -------
+        shapely.geometry.shape
+        """
+        return self._aoi
+
+    @aoi.setter
+    def aoi(
         self,
-        aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry],
-        columns: Optional[List[str]] = None,
-    ) -> FeatureSearch:
+        aoi: Optional[
+            Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+        ] = None,
+    ) -> None:
         """
-        Create a new FeatureSearch instance that downselects to features that intersect the given AOI.
-
-        Parameters
-        ----------
-        aoi: descarteslabs.geo.GeoContext
-            AOI used to filter features by intersection
-        columns: Optional[List[str]]
-            Optional list of column names.
+        Set the aoi associated with this TableOptions.
 
         Returns
         -------
-        feature_search: FeatureSearch
-            New FeatureSearch instance that downselects to features in the AOI.
+        None
         """
-        if self.aoi and self.accumulate_intersections:
-            new_aoi = self.aoi.intersection(_to_shape(aoi))
-        else:
-            new_aoi = _to_shape(aoi)
+        self._aoi = _to_shape(aoi)
 
-        return FeatureSearch(self.parent_table, new_aoi, self.property_filter, columns)
-
-    def filter(
-        self, filter: Properties, columns: Optional[List[str]] = None
-    ) -> FeatureSearch:
+    @property
+    def property_filter(self) -> Properties:
         """
-        Create a new FeatureSearch instance that downselects to features that are selected by the filter.
-
-        Parameters
-        ----------
-        filter: descarteslabs.common.Properties
-            AOI used to filter features by intersection
-        columns: Optional[List[str]]
-            Optional list of column names.
+        Return the property filter associated with this TableOptions.
 
         Returns
         -------
-        feature_search: FeatureSearch
-            New FeatureSearch instance that downselects to features in the AOI.
+        Properties
         """
-        if self.property_filter:
-            new_filter = self.property_filter & filter
-        else:
-            new_filter = filter
+        return self._property_filter
 
-        return FeatureSearch(self.parent_table, self.aoi, new_filter, columns)
-
-    def collect(self) -> gpd.GeoDataFrame:
+    @property_filter.setter
+    def property_filter(self, property_filter: Properties) -> None:
         """
-        Return a GeoPandas dataframe with the selected items.
+        Set the property_filter associated with this TableOptions.
 
         Returns
         -------
-        gpd.GeoDataFrame:
-            A GeoPandas dataframe.
+        None
         """
-        return features_query(
-            self.parent_table.parameters["id"],
-            property_filter=self.property_filter,
-            aoi=_shape_to_geojson(self.aoi),
-            columns=self.columns,
-        )
+        if not hasattr(property_filter, "jsonapi_serialize"):
+            raise TypeError("'property_filter' must be of type <Properties>!")
+        self._property_filter = property_filter
+
+    @property
+    def columns(self) -> List[str]:
+        """
+        Return the columns associated with this TableOptions.
+
+        Returns
+        -------
+        list
+        """
+        return self._columns
+
+    @columns.setter
+    def columns(self, columns: List[str]) -> None:
+        """
+        Set the columns associated with this TableOptions.
+
+        Returns
+        -------
+        None
+        """
+        if not isinstance(columns, list):
+            raise TypeError("'columns' must be of type <list>!")
+        self._columns = columns
 
 
 class Table:
     """
-    A class for creating and interacting with vector products.
+    A class for creating and interacting with Vector products.
     """
 
-    def __init__(self, table_parameters: Union[dict, str]):
+    def __init__(
+        self, table_parameters: Union[dict, str], options: TableOptions = None
+    ):
         """
         Initialize a Table instance.
 
@@ -245,7 +277,7 @@ class Table:
         Parameters
         ----------
         product_parameters: Union[dict, str]
-            Dictionary of product parameters or the produt id.
+            Dictionary of product parameters or the product id.
         """
         if isinstance(table_parameters, str):
             table_parameters = products_get(table_parameters)
@@ -253,49 +285,76 @@ class Table:
         for k, v in table_parameters.items():
             setattr(self, f"_{k}", v)
 
+        if not options:
+            options = TableOptions(self.id)
+
+        if not isinstance(options, TableOptions):
+            raise TypeError(("'options' must be of type <TableOptions>!"))
+        self.options = options
+
     @staticmethod
-    def get(product_id: str) -> Table:
+    def get(
+        product_id: str,
+        aoi: Optional[
+            Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+        ] = None,
+        property_filter: Optional[Properties] = None,
+        columns: Optional[List[str]] = [],
+    ) -> Table:
         """
         Get a Table instance associated with a product id. Raise an exception if this `product_id` doesn't exit.
 
         Parameters
         ----------
         product_id: str
-            ID of product
+            Product ID of Vector Table.
+        aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
+            AOI associated with this TableOptions.
+        property_filter: Optional[Properties]
+            Property filter associated with this TableOptions.
+        columns: Optional[List[str]]
+            List of columns to include in each query.
 
         Returns
         -------
         table: Table
             Table instance for the product ID.
         """
-        return Table(products_get(product_id))
+        options = TableOptions(
+            product_id=product_id,
+            aoi=aoi,
+            property_filter=property_filter,
+            columns=columns,
+        )
+
+        return Table(table_parameters=products_get(product_id), options=options)
 
     @staticmethod
     def create(product_id, *args, **kwargs) -> Table:
         """
-        Create a vector product.
+        Create a Vector product.
 
         Parameters
         ----------
         product_id : str
-            ID of the vector product.
+            ID of the Vector product.
         name : str
-            Name of the vector product.
+            Name of the Vector product.
         description : str, optional
-            Description of the vector product.
+            Description of the Vector product.
         tags : list of str, optional
-            A list of tags to associate with the vector product.
+            A list of tags to associate with the Vector product.
         readers : list of str, optional
-            A list of vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         writers : list of str, optional
-            A list of vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         owners : list of str, optional
-            A list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         model : VectorBaseModel, optional
-            A model that provides a user provided schema for the vector table.
+            A model that provides a user provided schema for the Vector table.
 
         Returns
         -------
@@ -319,7 +378,7 @@ class Table:
     @staticmethod
     def list(tags: Optional[List[str]] = None) -> List[Table]:
         """
-        List available vector products.
+        List available Vector products.
 
         Parameters
         ----------
@@ -513,6 +572,18 @@ class Table:
         return json.loads(self._model)
 
     @property
+    def columns(self) -> list:
+        """
+        Return the column names of the table.
+
+        Returns
+        -------
+        columns: list
+            Table columns
+        """
+        return list(json.loads(self._model)["properties"].keys())
+
+    @property
     def parameters(self) -> dict:
         """
         Return the table parameters as dictionary.
@@ -568,24 +639,24 @@ class Table:
 
     def save(self) -> None:
         """
-        Save/update this vector product.
+        Save/update this Vector product.
 
         Parameters
         ----------
         name : str
-            New name of the vector product.
+            New name of the Vector product.
         description : str, optional
-            New Description of the vector product.
+            New Description of the Vector product.
         tags : list of str, optional
-            New list of tags to associate with the vector product.
+            New list of tags to associate with the Vector product.
         readers : list of str, optional
-            New list of vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            New list of Vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         writers : list of str, optional
-            New list of vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            New list of Vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         owners : list of str, optional
-            New list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            New list of Vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         """
         products_update(
@@ -598,37 +669,10 @@ class Table:
             owners=self.owners,
         )
 
-    def features(
-        self,
-        aoi: Optional[
-            Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
-        ] = None,
-        filter: Optional[Properties] = None,
-        columns: Optional[List[str]] = None,
-    ) -> FeatureSearch:
-        """
-        Return a filterable FeatureSearch object.
-
-        Parameters
-        ----------
-        aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
-            Optional AOI object on which to filter features.
-        filter: Optional[Properties]
-            Optional property filter.
-        columns: Optional[List[str]]
-            Optional list of column names.
-
-        Returns
-        -------
-        fs: FeatureSearch
-            Filteratble object
-        """
-        return FeatureSearch(self, aoi=aoi, filter=filter, columns=columns)
-
     def add(
         self,
         dataframe: gpd.GeoDataFrame,
-    ) -> gpd.GeoDataFrame:
+    ) -> FeatureCollection:
         """
         Add a GeoPandas dataframe to this table.
 
@@ -639,13 +683,13 @@ class Table:
 
         Returns
         -------
-        dataframe: gpd.GeoDataFrame
+        FeatureCollection
             Added features. Note that this will differ from the input in that UUIDs have been attributed.
         """
 
-        return features_add(self.id, dataframe)
+        return FeatureCollection(self.id, features_add(self.id, dataframe))
 
-    def get_feature(self, feature_id: str) -> gpd.GeoDataFrame:
+    def get_feature(self, feature_id: str) -> Feature:
         """
         Get a specific feature from this Table instance.
 
@@ -654,14 +698,14 @@ class Table:
         feature_id: str
             Feature ID for which we would like the feature
 
-        Retruns
+        Returns
         -------
-        gpd.GeoDataFrame
-            A GeoPandas dataframe.
+        Feature
+            A Vector Feature instance.
         """
-        return features_get(self.id, feature_id)
+        return Feature.get(f"{self.id}:{feature_id}")
 
-    def try_get_feature(self, feature_id: str) -> Union[dict, None]:
+    def try_get_feature(self, feature_id: str) -> Union[Feature, None]:
         """
         Get a specific feature from this Table instance. If it isn't present, return None.
 
@@ -670,46 +714,15 @@ class Table:
         feature_id: str
             Feature ID for which we would like the feature
 
-        Retruns
-        -------
-        gpd.GeoDataFrame
-            A GeoPandas dataframe.
-        """
-        try:
-            return features_get(self.id, feature_id)
-        except ClientException:
-            return None
-
-    def update_feature(
-        self, feature_id: str, dataframe: gpd.GeoDataFrame
-    ) -> gpd.GeoDataFrame:
-        """
-        Update a feature in a vector product.
-
-        Parameters
-        ----------
-        feature_id : str
-            ID of the feature.
-        feature : dict
-            The GeoPandas dataframe to replace the feature with.
-
         Returns
         -------
-        gpd.GeoDataFrame
-            A GeoPandas dataframe.
+        Feature
+            A Vector Feature instance.
         """
-        return features_update(self.id, feature_id, dataframe)
-
-    def delete_feature(self, feature_id: str) -> None:
-        """
-        Delete a feature in a vector product.
-
-        Parameters
-        ----------
-        feature_id : str
-            ID of the feature.
-        """
-        features_delete(self.id, feature_id)
+        try:
+            return Feature.get(f"{self.id}:{feature_id}")
+        except ClientException:
+            return None
 
     def visualize(
         self,
@@ -720,18 +733,18 @@ class Table:
         vector_tile_layer_styles: Optional[dict] = None,
     ) -> ipyleaflet.leaflet.TileLayer:
         """
-        Visualize this Table as an `ipyleaflet` vector tile layer.
+        Visualize this Table as an `ipyleaflet` VectorTileLayer.
 
         Parameters
         ----------
         name : str
-            Name to give to the ipyleaflet vector tile layer.
+            Name to give to the ipyleaflet VectorTileLayer.
         map: ipyleaflet.leaflet.Map
             Map to which to add the layer
         property_filter : Properties, optional
-            Property filter to apply to the vector tiles.
+            Property filter to apply to the Vector tiles.
         include_properties : list of str, optional
-            Properties to include in the vector tiles. These can be used for styling.
+            Properties to include in the Vector tiles. These can be used for styling.
         vector_tile_layer_styles : dict, optional
             Vector tile styles to apply. See https://ipyleaflet.readthedocs.io/en/latest/layers/vector_tile.html for
             more details.
@@ -751,10 +764,303 @@ class Table:
         map.add_layer(lyr)
         return lyr
 
+    def search(self, override_options: TableOptions = None) -> FeatureCollection:
+        """
+        Method to execute query and return a Vector FeatureCollection
+        (GeoPandas dataframe) with the selected items.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        df: FeatureCollection
+            A Vector FeatureCollection.
+        """
+
+        options = override_options
+
+        if not options:
+            options = self.options
+
+        if not isinstance(options, TableOptions):
+            raise TypeError("'options' must be of type <TableOptions>.")
+
+        df = features_query(
+            options.product_id,
+            property_filter=options.property_filter,
+            aoi=_shape_to_geojson(options.aoi),
+            columns=options.columns,
+        )
+
+        return FeatureCollection(options.product_id, df)
+
+    def join(
+        self,
+        join_table: [Union[Table, TableOptions]],
+        join_type: Literal["INNER", "LEFT", "RIGHT"],
+        join_columns: List[Tuple[str, str]],
+        override_options: Optional[TableOptions] = None,
+    ) -> FeatureCollection:
+        """
+        Method to execute join and return a Vector FeatureCollection
+        (GeoPandas dataframe) with the selected items.
+
+        Parameters
+        ----------
+        join_table: [Union[Table, TableOptions]]
+            The table to join. Can be either Table of TableOptions.
+        join_type: Literal["INNER", "LEFT", "RIGHT"]
+            The type of join to perform. Must be one of INNER,
+            LEFT, or RIGHT.
+        join_columns: List[Tuple[str, str]]
+            List of column names to join on. Must be formatted
+            as [(table1_col1, table2_col2), ...].
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        df: FeatureCollection
+            A Vector FeatureCollection.
+        """
+
+        options = override_options
+
+        if not options:
+            options = self.options
+
+        if not isinstance(options, TableOptions):
+            raise TypeError("'override_options' must be of type <TableOptions>.")
+
+        if isinstance(join_table, TableOptions):
+            pass
+        elif isinstance(join_table, Table):
+            join_table = join_table.options
+        else:
+            raise TypeError("'join_table' must be of type <TableOptions>.")
+
+        include_columns = [tuple(options.columns), tuple(join_table.columns)]
+
+        df = features_join(
+            input_product_id=options.product_id,
+            join_product_id=join_table.product_id,
+            join_type=join_type,
+            join_columns=join_columns,
+            include_columns=include_columns,
+            input_property_filter=options.property_filter,
+            input_aoi=_shape_to_geojson(options.aoi),
+            join_property_filter=join_table.property_filter,
+            join_aoi=_shape_to_geojson(join_table.aoi),
+        )
+
+        return FeatureCollection(options.product_id, df)
+
     def delete(self) -> None:
         """
-        Delete this vector product.
+        Delete this Vector product.
 
         This function will disable all subsequent non-static method calls.
         """
         products_delete(self.id)
+
+
+class FeatureCollection(gpd.GeoDataFrame):
+    """
+    A class for interacting with Vector features.
+    """
+
+    def __init__(self, id: str, *args, **kwargs):
+        """
+        Initialize a FeatureCollection instance.
+
+        Users should create a Feature instance via `FeatureSearch.collect`.
+
+        Parameters
+        ----------
+        id: str
+            The feature id.
+        """
+        super().__init__(*args, **kwargs)
+
+        self._id = id
+
+    @property
+    def id(self):
+        """
+        Return the product id of the Table.
+
+        Returns
+        -------
+        product_id: str
+            Table product ID
+        """
+        return self._id
+
+    @property
+    def table(self):
+        """
+        Return the Table of the FeatureCollection.
+
+        Returns
+        -------
+        table: Table
+            Table
+        """
+        return Table.get(self._id)
+
+
+class Feature:
+    """
+    A class for interacting with a Vector feature.
+    """
+
+    def __init__(self, id: str, df: gpd.GeoDataFrame):
+        """
+        Initialize a Feature instance.
+
+        Users should create a Feature instance via `Table.get_feature`.
+
+        Parameters
+        ----------
+        id: str
+            The feature id.
+        """
+        self._id = id
+        self._values = {}
+        for k, v in df.to_dict().items():
+            self._values[k] = v[0]
+
+    @property
+    def values(self):
+        """
+        Return the id of the Vector Feature.
+
+        Returns
+        -------
+        id: str
+            Feature ID
+        """
+        return self._values
+
+    @values.setter
+    def values(self, key, value):
+        """
+        Return the id of the Vector Feature.
+
+        Returns
+        -------
+        id: str
+            Feature ID
+        """
+        self._values[key] = value
+
+    @property
+    def id(self):
+        """
+        Return the id of the Vector Feature.
+
+        Returns
+        -------
+        id: str
+            Feature ID
+        """
+        return self._id
+
+    @property
+    def product_id(self):
+        """
+        Return the product id of the Table.
+
+        Returns
+        -------
+        product_id: str
+            Table product ID
+        """
+        return ":".join(self._id.split(":")[:-1])
+
+    @property
+    def name(self):
+        """
+        Return the name/uuid of the Vector Feature.
+
+        Returns
+        -------
+        name: str
+            Feature name
+        """
+        return self._id.split(":")[-1]
+
+    @property
+    def table(self):
+        """
+        Return the Table of the FeatureCollection.
+
+        Returns
+        -------
+        table: Table
+            Table
+        """
+        return Table.get(self.product_id)
+
+    @staticmethod
+    def get(id: str) -> Feature:
+        """
+        Get a Feature instance associated with a Vector Feature ID.
+
+        Parameters
+        ----------
+        id: str
+            ID of Feature
+
+        Returns
+        -------
+        feature: Feature
+            Feature instance for the feature ID.
+        """
+        pid = ":".join(id.split(":")[0:-1])
+        fid = id.split(":")[-1]
+
+        df = features_get(pid, fid)
+
+        return Feature(id, df)
+
+    def save(self) -> None:
+        """
+        Save/update this Vector Feature.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        gdf = gpd.GeoDataFrame.from_features([self], crs="EPSG:4326")
+        features_update(self.product_id, self.name, gdf)
+
+    def delete(self) -> None:
+        """
+        Delete this Vector Feature.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        features_delete(self.product_id, self.name)
+
+    @property
+    def __geo_interface__(self):
+        return {
+            "geometry": self.values["geometry"].__geo_interface__,
+            "properties": {
+                c: self.values[c] for c in self.table.columns if c != "geometry"
+            },
+        }

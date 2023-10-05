@@ -1,4 +1,7 @@
-import io
+from __future__ import annotations
+
+from io import BytesIO
+from typing import List, Tuple
 
 import geopandas as gpd
 import requests
@@ -28,7 +31,7 @@ def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     if not isinstance(dataframe, gpd.GeoDataFrame):
         raise TypeError(f"Unsupported data type {type(dataframe)}")
 
-    buffer = io.BytesIO()
+    buffer = BytesIO()
     dataframe.to_parquet(buffer, index=False)
     buffer.seek(0)
 
@@ -42,7 +45,7 @@ def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     check_response(response, "add feature")
 
-    buffer = io.BytesIO(response.content)
+    buffer = BytesIO(response.content)
 
     return gpd.read_parquet(buffer)
 
@@ -81,7 +84,81 @@ def query(
     )
     check_response(response, "query feature")
 
-    buffer = io.BytesIO(response.content)
+    buffer = BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
+
+
+@backoff_wrapper
+def join(
+    input_product_id: str,
+    join_product_id: str,
+    join_type: str,
+    join_columns: List[Tuple[str, str]],
+    include_columns: List[Tuple[str, ...]] = None,
+    input_property_filter: Properties = None,
+    join_property_filter: Properties = None,
+    input_aoi: dict = None,
+    join_aoi: dict = None,
+) -> gpd.GeoDataFrame:
+    """Join features in a vector product.
+
+    Parameters
+    ----------
+    input_product_id : str
+        Product ID of the input table.
+    join_product_id : str
+        Product ID of the join table.
+    join_type : str
+        String indicating the type of join to perform.
+        Must be one of INNER, LEFT, or RIGHT.
+    join_columns : List[Tuple[str, str]]
+        List of columns to join the input and join table.
+        [(input_table.col1, join_table.col2), ...]
+    include_columns : List[Tuple[str, ...]]
+        List of columns to include from either side of
+        the join formatter as [(input_table.col1, input_table.col2),
+        (join_table.col3, join_table.col4)]. If None, all columns
+        from both tables are returned.
+    input_property_filter : Properties
+        Property filters to filter the input table.
+    join_property_filter : Properties
+        Property filters to filter the join table.
+    input_aoi : dict
+        A GeoJSON Feature to filter the input table.
+    join_aoi : dict
+        A GeoJSON Feature to filter the join table.
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoPandas dataframe.
+    """
+    if input_property_filter is not None:
+        input_property_filter = input_property_filter.serialize()
+
+    if join_property_filter is not None:
+        join_property_filter = join_property_filter.serialize()
+
+    params = {
+        "input_product_id": input_product_id,
+        "join_type": join_type,
+        "join_product_id": join_product_id,
+        "join_columns": join_columns,
+        "include_columns": include_columns,
+        "input_property_filter": input_property_filter,
+        "input_aoi": input_aoi,
+        "join_property_filter": join_property_filter,
+        "join_aoi": join_aoi,
+    }
+
+    response = requests.post(
+        f"{API_HOST}/products/features/join",
+        headers={"Authorization": get_token()},
+        json=params,
+    )
+    check_response(response, "join feature")
+
+    buffer = BytesIO(response.content)
 
     return gpd.read_parquet(buffer)
 
@@ -109,15 +186,13 @@ def get(product_id: str, feature_id: str) -> gpd.GeoDataFrame:
 
     check_response(response, "get feature")
 
-    buffer = io.BytesIO(response.content)
+    buffer = BytesIO(response.content)
 
     return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper
-def update(
-    product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame
-) -> gpd.GeoDataFrame:
+def update(product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame) -> None:
     """Update a feature in a vector product.
 
     Parameters
@@ -131,8 +206,7 @@ def update(
 
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe of the modified feature.
+    None
     """
 
     if not isinstance(dataframe, gpd.GeoDataFrame):
@@ -141,7 +215,7 @@ def update(
     if dataframe.shape[0] != 1:
         raise ValueError("Only 1 row can be updated!")
 
-    buffer = io.BytesIO()
+    buffer = BytesIO()
     dataframe.to_parquet(buffer, index=False)
     buffer.seek(0)
 
@@ -154,10 +228,6 @@ def update(
     )
 
     check_response(response, "update feature")
-
-    buffer = io.BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
 
 
 @backoff_wrapper

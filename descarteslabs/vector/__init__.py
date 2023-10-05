@@ -1,7 +1,12 @@
 from descarteslabs.utils import Properties
 
-from .vector import Table
+from .vector import Feature, Table, TableOptions
 
 properties = Properties()
 
-__all__ = ["Table", "properties", "property_filtering"]
+__all__ = [
+    "Table",
+    "TableOptions",
+    "Feature",
+    "properties",
+]
