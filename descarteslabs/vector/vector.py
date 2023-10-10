@@ -10,7 +10,9 @@ import shapely
 from descarteslabs.utils import Properties
 
 # To avoid confusion we import these as <module>_<function>
+from .features import Statistic
 from .features import add as features_add
+from .features import aggregate as features_aggregate
 from .features import delete as features_delete
 from .features import get as features_get
 from .features import join as features_join
@@ -35,6 +37,7 @@ accepted_geom_types = [
     "MultiPolygon",
     "GeometryCollection",
 ]
+
 
 # Supporting functions for geometry filtering.
 
@@ -142,7 +145,7 @@ class TableOptions:
             Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
         ] = None,
         property_filter: Optional[Properties] = None,
-        columns: Optional[List[str]] = [],
+        columns: Optional[List[str]] = None,
     ):
         """
         Initialize an instance of TableOptions.
@@ -224,7 +227,7 @@ class TableOptions:
         return self._property_filter
 
     @property_filter.setter
-    def property_filter(self, property_filter: Properties) -> None:
+    def property_filter(self, property_filter: Optional[Properties] = None) -> None:
         """
         Set the property_filter associated with this TableOptions.
 
@@ -232,9 +235,12 @@ class TableOptions:
         -------
         None
         """
-        if not hasattr(property_filter, "jsonapi_serialize"):
-            raise TypeError("'property_filter' must be of type <Properties>!")
-        self._property_filter = property_filter
+        if hasattr(property_filter, "jsonapi_serialize"):
+            self._property_filter = property_filter
+        elif not property_filter:
+            self._property_filter = None
+        else:
+            raise TypeError("'property_filter' must be of type <None> or <Properties>!")
 
     @property
     def columns(self) -> List[str]:
@@ -248,7 +254,7 @@ class TableOptions:
         return self._columns
 
     @columns.setter
-    def columns(self, columns: List[str]) -> None:
+    def columns(self, columns: Optional[List[str]] = None) -> None:
         """
         Set the columns associated with this TableOptions.
 
@@ -256,8 +262,12 @@ class TableOptions:
         -------
         None
         """
-        if not isinstance(columns, list):
-            raise TypeError("'columns' must be of type <list>!")
+        if isinstance(columns, list):
+            self._columns = columns
+        elif not columns:
+            self._columns = None
+        else:
+            raise TypeError("'columns' must be of type <None> or <list>!")
         self._columns = columns
 
 
@@ -780,10 +790,7 @@ class Table:
             A Vector FeatureCollection.
         """
 
-        options = override_options
-
-        if not options:
-            options = self.options
+        options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
             raise TypeError("'options' must be of type <TableOptions>.")
@@ -827,10 +834,7 @@ class Table:
             A Vector FeatureCollection.
         """
 
-        options = override_options
-
-        if not options:
-            options = self.options
+        options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
             raise TypeError("'override_options' must be of type <TableOptions>.")
@@ -857,6 +861,167 @@ class Table:
         )
 
         return FeatureCollection(options.product_id, df)
+
+    def _aggregate(
+        self, statistic: Statistic, override_options: TableOptions
+    ) -> Union[int, dict]:
+        """
+        Private method for handling aggregate functions.
+
+        Parameters
+        ----------
+        statistic: Statistic
+            Statistic to calculate.
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        Union[int, dict]
+            The statistic COUNT will always return an integer. All
+            other statistics will return a dictionary of results.
+            Keys of the dictionary will be the column names requested
+            appended with the statistic ('column_1.STATISTIC') and values
+            are the result of the aggregate statistic.
+        """
+        options = override_options if override_options else self.options
+
+        if not isinstance(statistic, Statistic):
+            raise TypeError("'statistic' must be of type <Statistic>.")
+
+        if not isinstance(options, TableOptions):
+            raise TypeError("'options' must be of type <TableOptions>.")
+
+        return features_aggregate(
+            product_id=options.product_id,
+            statistic=statistic,
+            columns=options.columns,
+            property_filter=options.property_filter,
+            aoi=_shape_to_geojson(options.aoi),
+        )
+
+    def count(
+        self,
+        override_options: Optional[TableOptions] = None,
+    ) -> int:
+        """
+        Method to return the row count of the vector product.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        int
+        """
+
+        return self._aggregate(Statistic.COUNT, override_options)
+
+    def sum(
+        self,
+        override_options: Optional[TableOptions] = None,
+    ) -> dict:
+        """
+        Method to return the row count of the vector product.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        dict :
+            Dictionary of results. Keys the column names requested
+            appended with the statistic ('column_1.SUM') and values
+            are the result of the aggregate statistic.
+        """
+
+        return self._aggregate(Statistic.SUM, override_options)
+
+    def min(
+        self,
+        override_options: Optional[TableOptions] = None,
+    ) -> dict:
+        """
+        Method to return the row count of the vector product.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        dict :
+            Dictionary of results. Keys the column names requested
+            appended with the statistic ('column_1.MIN') and values
+            are the result of the aggregate statistic.
+        """
+
+        return self._aggregate(Statistic.MIN, override_options)
+
+    def max(
+        self,
+        override_options: Optional[TableOptions] = None,
+    ) -> dict:
+        """
+        Method to return the row count of the vector product.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        dict :
+            Dictionary of results. Keys the column names requested
+            appended with the statistic ('column_1.MAX') and values
+            are the result of the aggregate statistic.
+        """
+
+        return self._aggregate(Statistic.MAX, override_options)
+
+    def mean(
+        self,
+        override_options: Optional[TableOptions] = None,
+    ) -> dict:
+        """
+        Method to return the row count of the vector product.
+
+        Parameters
+        ----------
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        dict :
+            Dictionary of results. Keys the column names requested
+            appended with the statistic ('column_1.MEAN') and values
+            are the result of the aggregate statistic.
+        """
+
+        return self._aggregate(Statistic.MEAN, override_options)
+
+    def reset_options(self) -> None:
+        """
+        Method to reset/clear current table options.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        self.options.property_filter = None
+        self.options.columns = None
+        self.options.aoi = None
 
     def delete(self) -> None:
         """

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from enum import Enum
 from io import BytesIO
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import geopandas as gpd
 import requests
@@ -9,6 +10,18 @@ from descarteslabs.utils import Properties
 
 from .common import API_HOST, get_token
 from .util import backoff_wrapper, check_response
+
+
+class Statistic(str, Enum):
+    """
+    A class for aggregate statistics.
+    """
+
+    COUNT = "COUNT"
+    SUM = "SUM"
+    MIN = "MIN"
+    MAX = "MAX"
+    MEAN = "MEAN"
 
 
 @backoff_wrapper
@@ -228,6 +241,58 @@ def update(product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame) -> Non
     )
 
     check_response(response, "update feature")
+
+
+@backoff_wrapper
+def aggregate(
+    product_id: str,
+    statistic: Statistic,
+    property_filter: Properties = None,
+    aoi: dict = None,
+    columns: list = None,
+) -> Union[int, dict]:
+    """Aggregate statistics for features in a vector product.
+
+    Parameters
+    ----------
+    product_id : str
+        ID of the vector product.
+    statistic : Statistic
+        Statistic to calculate.
+    property_filter : Properties, optional
+        Property filters to filter the product with.
+    aoi : dict, optional
+        A GeoJSON Feature to filter the vector product with.
+    columns : list, optional
+        Optional list of column names.
+
+    Returns
+    -------
+    Union[int, dict]
+        The statistic COUNT will always return an integer. All
+        other statistics will return a dictionary of results.
+        Keys of the dictionary will be the column names requested
+        appended with the statistic ('column_1.STATISTIC') and values
+        are the result of the aggregate statistic.
+    """
+    if not isinstance(statistic, Statistic):
+        raise TypeError("'statistic' must be of type <Statistic>.")
+
+    if property_filter is not None:
+        property_filter = property_filter.serialize()
+    response = requests.post(
+        f"{API_HOST}/products/{product_id}/features/aggregate",
+        headers={"Authorization": get_token()},
+        json={
+            "statistic": statistic.value,
+            "filter": property_filter,
+            "aoi": aoi,
+            "columns": columns,
+        },
+    )
+    check_response(response, "aggregate feature")
+
+    return response.json()
 
 
 @backoff_wrapper
