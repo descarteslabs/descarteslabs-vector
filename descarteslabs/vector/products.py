@@ -1,4 +1,3 @@
-import json
 from typing import List, Optional, Union
 
 import requests
@@ -84,7 +83,7 @@ def create(
             "readers": readers,
             "writers": writers,
             "owners": owners,
-            "model": json.dumps(model.model_json_schema()),
+            "model": model.model_json_schema(),
         }
     )
 

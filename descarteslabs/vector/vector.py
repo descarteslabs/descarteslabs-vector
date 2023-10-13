@@ -579,7 +579,7 @@ class Table:
         model: dict
             Table model
         """
-        return json.loads(self._model)
+        return self._model
 
     @property
     def columns(self) -> list:
@@ -591,7 +591,7 @@ class Table:
         columns: list
             Table columns
         """
-        return list(json.loads(self._model)["properties"].keys())
+        return list(self._model["properties"].keys())
 
     @property
     def parameters(self) -> dict:
@@ -618,10 +618,7 @@ class Table:
         params = {}
 
         for k in keys:
-            if k == "_model":
-                params[k.lstrip("_")] = json.loads(self.__dict__[k])
-            else:
-                params[k.lstrip("_")] = self.__dict__[k]
+            params[k.lstrip("_")] = self.__dict__[k]
 
         return params
 
