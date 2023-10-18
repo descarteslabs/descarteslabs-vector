@@ -18,6 +18,7 @@ from .features import get as features_get
 from .features import join as features_join
 from .features import query as features_query
 from .features import update as features_update
+from .layers import DLVectorTileLayer
 from .products import create as products_create
 from .products import delete as products_delete
 from .products import get as products_get
@@ -735,10 +736,9 @@ class Table:
         self,
         name: str,
         map: ipyleaflet.leaflet.Map,
-        property_filter: Optional[Properties] = None,
-        include_properties: Optional[List[str]] = None,
         vector_tile_layer_styles: Optional[dict] = None,
-    ) -> ipyleaflet.leaflet.TileLayer:
+        override_options: TableOptions = None,
+    ) -> DLVectorTileLayer:
         """
         Visualize this Table as an `ipyleaflet` VectorTileLayer.
 
@@ -748,24 +748,28 @@ class Table:
             Name to give to the ipyleaflet VectorTileLayer.
         map: ipyleaflet.leaflet.Map
             Map to which to add the layer
-        property_filter : Properties, optional
-            Property filter to apply to the Vector tiles.
-        include_properties : list of str, optional
-            Properties to include in the Vector tiles. These can be used for styling.
         vector_tile_layer_styles : dict, optional
             Vector tile styles to apply. See https://ipyleaflet.readthedocs.io/en/latest/layers/vector_tile.html for
             more details.
+        override_options: TableOptions
+            Override options for this query. AOI option is ignored
+            when invoking this method.
 
         Returns
         -------
-        ipyleaflet.VectorTileLayer
+        DLVectorTileLayer
             Vector tile layer that can be added to an ipyleaflet map.
         """
+        options = override_options if override_options else self.options
+
+        if not isinstance(options, TableOptions):
+            raise TypeError("'options' must be of type <TableOptions>.")
+
         lyr = create_layer(
-            self.id,
-            name,
-            property_filter=property_filter,
-            include_properties=include_properties,
+            product_id=self.id,
+            name=name,
+            property_filter=options.property_filter,
+            columns=options.columns,
             vector_tile_layer_styles={self.id: vector_tile_layer_styles},
         )
         map.add_layer(lyr)

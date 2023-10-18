@@ -12,9 +12,9 @@ def create_layer(
     product_id: str,
     name: str,
     property_filter: Optional[Properties] = None,
-    include_properties: Optional[List[str]] = None,
+    columns: Optional[List[str]] = None,
     vector_tile_layer_styles: Optional[dict] = None,
-):
+) -> DLVectorTileLayer:
     """Create vector tile layer from a vector product.
 
     Parameters
@@ -25,8 +25,8 @@ def create_layer(
         Name to give to the ipyleaflet vector tile layer.
     property_filter : Properties, optional
         Property filter to apply to the vector tiles.
-    include_properties : list of str, optional
-        Properties to include in the vector tiles. These can be used for styling.
+    columns : list of str, optional
+       Optional list of column names to include. These can be used for styling.
     vector_tile_layer_styles : dict, optional
         Vector tile styles to apply. See https://ipyleaflet.readthedocs.io/en/latest/layers/vector_tile.html for more
         details.
@@ -46,11 +46,15 @@ def create_layer(
 
     # Construct the query parameters
     property_filter = json.dumps(property_filter)
-    include_properties = json.dumps(include_properties)
+    columns = json.dumps(columns)
+
     query_params = urllib.parse.urlencode(
-        {"property_filter": property_filter, "include_properties": include_properties},
+        {
+            "property_filter": property_filter,
+            "columns": columns,
+        },
         doseq=True,
-    )  # TODO: Strip null values
+    )
 
     # Create an ipyleaflet vector tile layer and return it
     lyr = DLVectorTileLayer(
