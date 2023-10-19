@@ -7,6 +7,8 @@ from .models import GenericFeatureBaseModel, VectorBaseModel
 from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
 
+REQUEST_TIMEOUT = 60
+
 
 def _check_tags(tags: Union[List[str], None] = None):
     if tags:
@@ -91,6 +93,7 @@ def create(
         f"{API_HOST}/products/",
         headers={"Authorization": get_token()},
         json=request_json,
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "create product")
     return response.json()
@@ -117,10 +120,13 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
             f"{API_HOST}/products/",
             headers={"Authorization": get_token()},
             params={"tags": ",".join(tags)},
+            timeout=REQUEST_TIMEOUT,
         )
     else:
         response = requests.get(
-            f"{API_HOST}/products/", headers={"Authorization": get_token()}
+            f"{API_HOST}/products/",
+            headers={"Authorization": get_token()},
+            timeout=REQUEST_TIMEOUT,
         )
     check_response(response, "list products")
     return response.json()
@@ -143,6 +149,7 @@ def get(product_id: str) -> dict:
     response = requests.get(
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token()},
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "get product")
     return response.json()
@@ -199,6 +206,7 @@ def update(
                 "owners": owners,
             },
         ),
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "update product")
     return response.json()
@@ -216,5 +224,6 @@ def delete(product_id: str):
     response = requests.delete(
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token()},
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "delete product")
