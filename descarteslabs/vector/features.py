@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import partial
 from io import BytesIO
 from typing import List, Tuple, Union
 
@@ -10,6 +11,8 @@ from descarteslabs.utils import Properties
 
 from .common import API_HOST, get_token
 from .util import backoff_wrapper, check_response
+
+REQUEST_TIMEOUT = 60
 
 
 class Statistic(str, Enum):
@@ -54,6 +57,7 @@ def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         f"{API_HOST}/products/{product_id}/features",
         headers={"Authorization": get_token()},
         files=files,
+        timeout=REQUEST_TIMEOUT,
     )
 
     check_response(response, "add feature")
@@ -94,6 +98,7 @@ def query(
         f"{API_HOST}/products/{product_id}/features/query",
         headers={"Authorization": get_token()},
         json={"filter": property_filter, "aoi": aoi, "columns": columns},
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "query feature")
 
@@ -124,9 +129,12 @@ def join(
         Product ID of the join table.
     join_type : str
         String indicating the type of join to perform.
-        Must be one of INNER, LEFT, or RIGHT.
+        Must be one of INNER, LEFT, RIGHT, INTERSECTS,
+            CONTAINS, OVERLAPS, WITHIN.
     join_columns : List[Tuple[str, str]]
         List of columns to join the input and join table.
+        Not used if join_type is one of INTERSECTS,
+            CONTAINS, OVERLAPS, WITHIN.
         [(input_table.col1, join_table.col2), ...]
     include_columns : List[Tuple[str, ...]]
         List of columns to include from either side of
@@ -168,12 +176,16 @@ def join(
         f"{API_HOST}/products/features/join",
         headers={"Authorization": get_token()},
         json=params,
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "join feature")
 
     buffer = BytesIO(response.content)
 
     return gpd.read_parquet(buffer)
+
+
+sjoin = partial(join, join_columns=None)
 
 
 @backoff_wrapper
@@ -195,6 +207,7 @@ def get(product_id: str, feature_id: str) -> gpd.GeoDataFrame:
     response = requests.get(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
+        timeout=REQUEST_TIMEOUT,
     )
 
     check_response(response, "get feature")
@@ -238,6 +251,7 @@ def update(product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame) -> Non
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
         files=files,
+        timeout=REQUEST_TIMEOUT,
     )
 
     check_response(response, "update feature")
@@ -289,6 +303,7 @@ def aggregate(
             "aoi": aoi,
             "columns": columns,
         },
+        timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "aggregate feature")
 
@@ -310,6 +325,7 @@ def delete(product_id: str, feature_id: str):
     response = requests.delete(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token()},
+        timeout=REQUEST_TIMEOUT,
     )
 
     check_response(response, "delete feature")

@@ -772,6 +772,10 @@ class Table:
             columns=options.columns,
             vector_tile_layer_styles={self.id: vector_tile_layer_styles},
         )
+        for layer in map.layers:
+            if layer.name == name:
+                map.remove_layer(layer)
+                break
         map.add_layer(lyr)
         return lyr
 
@@ -805,24 +809,26 @@ class Table:
 
         return FeatureCollection(options.product_id, df)
 
-    def join(
+    def _join(
         self,
         join_table: [Union[Table, TableOptions]],
-        join_type: Literal["INNER", "LEFT", "RIGHT"],
-        join_columns: List[Tuple[str, str]],
+        join_type: Literal[
+            "INNER", "LEFT", "RIGHT", "INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"
+        ],
+        join_columns: List[Tuple[str, str]] = None,
         override_options: Optional[TableOptions] = None,
-    ) -> FeatureCollection:
+    ):
         """
-        Method to execute join and return a Vector FeatureCollection
+        Private method to execute join or spatial join and return a Vector FeatureCollection
         (GeoPandas dataframe) with the selected items.
 
         Parameters
         ----------
         join_table: [Union[Table, TableOptions]]
             The table to join. Can be either Table of TableOptions.
-        join_type: Literal["INNER", "LEFT", "RIGHT"]
+        join_type: Literal["INNER", "LEFT", "RIGHT", "INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"]
             The type of join to perform. Must be one of INNER,
-            LEFT, or RIGHT.
+            LEFT, RIGHT, INTERSECTS, CONTAINS, OVERLAPS, WITHIN.
         join_columns: List[Tuple[str, str]]
             List of column names to join on. Must be formatted
             as [(table1_col1, table2_col2), ...].
@@ -832,9 +838,7 @@ class Table:
         Returns
         -------
         df: FeatureCollection
-            A Vector FeatureCollection.
         """
-
         options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
@@ -862,6 +866,74 @@ class Table:
         )
 
         return FeatureCollection(options.product_id, df)
+
+    def join(
+        self,
+        join_table: [Union[Table, TableOptions]],
+        join_type: Literal["INNER", "LEFT", "RIGHT"],
+        join_columns: List[Tuple[str, str]] = None,
+        override_options: Optional[TableOptions] = None,
+    ) -> FeatureCollection:
+        """
+        Method to execute join and return a Vector FeatureCollection
+        (GeoPandas dataframe) with the selected items.
+
+        Parameters
+        ----------
+        join_table: [Union[Table, TableOptions]]
+            The table to join. Can be either Table of TableOptions.
+        join_type: Literal["INNER", "LEFT", "RIGHT"]
+            The type of join to perform. Must be one of INNER,
+            LEFT, or RIGHT.
+        join_columns: List[Tuple[str, str]]
+            List of column names to join on. Must be formatted
+            as [(table1_col1, table2_col2), ...].
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        df: FeatureCollection
+            A Vector FeatureCollection.
+        """
+        return self._join(
+            join_table=join_table,
+            join_type=join_type,
+            join_columns=join_columns,
+            override_options=override_options,
+        )
+
+    def sjoin(
+        self,
+        join_table: [Union[Table, TableOptions]],
+        join_type: Literal["INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"],
+        override_options: Optional[TableOptions] = None,
+    ) -> FeatureCollection:
+        """
+        Method to execute spatial join and return a Vector FeatureCollection
+        (GeoPandas dataframe) with the selected items.
+
+        Parameters
+        ----------
+        join_table: [Union[Table, TableOptions]]
+            The table to join. Can be either Table of TableOptions.
+        join_type: Literal["INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"]
+            The type of join to perform. Must be one of INTERSECTS,
+            CONTAINS, OVERLAPS, WITHIN.
+        override_options: TableOptions
+            Override options for this query.
+
+        Returns
+        -------
+        df: FeatureCollection
+            A Vector FeatureCollection.
+        """
+
+        return self._join(
+            join_table=join_table,
+            join_type=join_type,
+            override_options=override_options,
+        )
 
     def _aggregate(
         self, statistic: Statistic, override_options: TableOptions
