@@ -704,7 +704,7 @@ class Table:
         Parameters
         ----------
         feature_id: str
-            Feature ID for which we would like the feature
+            Feature ID for the feature to get.
 
         Returns
         -------
@@ -720,7 +720,7 @@ class Table:
         Parameters
         ----------
         feature_id: str
-            Feature ID for which we would like the feature
+            Feature ID for the feature to get.
 
         Returns
         -------
