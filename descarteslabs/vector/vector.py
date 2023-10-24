@@ -871,7 +871,7 @@ class Table:
         self,
         join_table: [Union[Table, TableOptions]],
         join_type: Literal["INNER", "LEFT", "RIGHT"],
-        join_columns: List[Tuple[str, str]] = None,
+        join_columns: List[Tuple[str, str]],
         override_options: Optional[TableOptions] = None,
     ) -> FeatureCollection:
         """
