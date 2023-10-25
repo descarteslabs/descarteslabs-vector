@@ -182,6 +182,7 @@ class TableOptions:
     def product_id(self, product_id: str) -> None:
         """
         Set the product ID associated with this TableOptions.
+
         Returns
         -------
         str
