@@ -17,6 +17,7 @@ from .features import delete as features_delete
 from .features import get as features_get
 from .features import join as features_join
 from .features import query as features_query
+from .features import sjoin as features_sjoin
 from .features import update as features_update
 from .layers import DLVectorTileLayer
 from .products import create as products_create
@@ -809,64 +810,6 @@ class Table:
 
         return FeatureCollection(options.product_id, df)
 
-    def _join(
-        self,
-        join_table: [Union[Table, TableOptions]],
-        join_type: Literal[
-            "INNER", "LEFT", "RIGHT", "INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"
-        ],
-        join_columns: List[Tuple[str, str]] = None,
-        override_options: Optional[TableOptions] = None,
-    ):
-        """
-        Private method to execute join or spatial join and return a Vector FeatureCollection
-        (GeoPandas dataframe) with the selected items.
-
-        Parameters
-        ----------
-        join_table: [Union[Table, TableOptions]]
-            The table to join. Can be either Table of TableOptions.
-        join_type: Literal["INNER", "LEFT", "RIGHT", "INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"]
-            The type of join to perform. Must be one of INNER,
-            LEFT, RIGHT, INTERSECTS, CONTAINS, OVERLAPS, WITHIN.
-        join_columns: List[Tuple[str, str]]
-            List of column names to join on. Must be formatted
-            as [(table1_col1, table2_col2), ...].
-        override_options: TableOptions
-            Override options for this query.
-
-        Returns
-        -------
-        df: FeatureCollection
-        """
-        options = override_options if override_options else self.options
-
-        if not isinstance(options, TableOptions):
-            raise TypeError("'override_options' must be of type <TableOptions>.")
-
-        if isinstance(join_table, TableOptions):
-            pass
-        elif isinstance(join_table, Table):
-            join_table = join_table.options
-        else:
-            raise TypeError("'join_table' must be of type <TableOptions>.")
-
-        include_columns = [tuple(options.columns), tuple(join_table.columns)]
-
-        df = features_join(
-            input_product_id=options.product_id,
-            join_product_id=join_table.product_id,
-            join_type=join_type,
-            join_columns=join_columns,
-            include_columns=include_columns,
-            input_property_filter=options.property_filter,
-            input_aoi=_shape_to_geojson(options.aoi),
-            join_property_filter=join_table.property_filter,
-            join_aoi=_shape_to_geojson(join_table.aoi),
-        )
-
-        return FeatureCollection(options.product_id, df)
-
     def join(
         self,
         join_table: [Union[Table, TableOptions]],
@@ -896,18 +839,40 @@ class Table:
         df: FeatureCollection
             A Vector FeatureCollection.
         """
-        return self._join(
-            join_table=join_table,
+        options = override_options if override_options else self.options
+
+        if not isinstance(options, TableOptions):
+            raise TypeError("'override_options' must be of type <TableOptions>.")
+
+        if isinstance(join_table, TableOptions):
+            pass
+        elif isinstance(join_table, Table):
+            join_table = join_table.options
+        else:
+            raise TypeError("'join_table' must be of type <TableOptions>.")
+
+        include_columns = [tuple(options.columns), tuple(join_table.columns)]
+
+        df = features_join(
+            input_product_id=options.product_id,
+            join_product_id=join_table.product_id,
             join_type=join_type,
             join_columns=join_columns,
-            override_options=override_options,
+            include_columns=include_columns,
+            input_property_filter=options.property_filter,
+            input_aoi=_shape_to_geojson(options.aoi),
+            join_property_filter=join_table.property_filter,
+            join_aoi=_shape_to_geojson(join_table.aoi),
         )
+
+        return FeatureCollection(options.product_id, df)
 
     def sjoin(
         self,
         join_table: [Union[Table, TableOptions]],
         join_type: Literal["INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"],
         override_options: Optional[TableOptions] = None,
+        keep_all_input_rows: Optional[bool] = False,
     ) -> FeatureCollection:
         """
         Method to execute spatial join and return a Vector FeatureCollection
@@ -928,12 +893,33 @@ class Table:
         df: FeatureCollection
             A Vector FeatureCollection.
         """
+        options = override_options if override_options else self.options
 
-        return self._join(
-            join_table=join_table,
+        if not isinstance(options, TableOptions):
+            raise TypeError("'override_options' must be of type <TableOptions>.")
+
+        if isinstance(join_table, TableOptions):
+            pass
+        elif isinstance(join_table, Table):
+            join_table = join_table.options
+        else:
+            raise TypeError("'join_table' must be of type <TableOptions>.")
+
+        include_columns = [tuple(options.columns), tuple(join_table.columns)]
+
+        df = features_sjoin(
+            input_product_id=options.product_id,
+            join_product_id=join_table.product_id,
             join_type=join_type,
-            override_options=override_options,
+            include_columns=include_columns,
+            input_property_filter=options.property_filter,
+            input_aoi=_shape_to_geojson(options.aoi),
+            join_property_filter=join_table.property_filter,
+            join_aoi=_shape_to_geojson(join_table.aoi),
+            keep_all_input_rows=keep_all_input_rows,
         )
+
+        return FeatureCollection(options.product_id, df)
 
     def _aggregate(
         self, statistic: Statistic, override_options: TableOptions

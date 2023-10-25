@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from enum import Enum
-from functools import partial
 from io import BytesIO
 from typing import List, Tuple, Union
 
@@ -108,6 +108,42 @@ def query(
 
 
 @backoff_wrapper
+def _join(params: dict) -> gpd.GeoDataFrame:
+    """internal join method.
+
+    Parameters
+    ----------
+    params : dict
+        Dictionary of parameters to pass to the join endpoint.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoPandas dataframe.
+    """
+    params = deepcopy(params)
+
+    input_property_filter = params.get("input_property_filter", None)
+    if input_property_filter is not None:
+        params["input_property_filter"] = input_property_filter.serialize()
+
+    join_property_filter = params.get("join_property_filter", None)
+    if join_property_filter is not None:
+        params["join_property_filter"] = join_property_filter.serialize()
+
+    response = requests.post(
+        f"{API_HOST}/products/features/join",
+        headers={"Authorization": get_token()},
+        json=params,
+        timeout=REQUEST_TIMEOUT,
+    )
+    check_response(response, "join feature")
+
+    buffer = BytesIO(response.content)
+
+    return gpd.read_parquet(buffer)
+
+
 def join(
     input_product_id: str,
     join_product_id: str,
@@ -133,8 +169,6 @@ def join(
             CONTAINS, OVERLAPS, WITHIN.
     join_columns : List[Tuple[str, str]]
         List of columns to join the input and join table.
-        Not used if join_type is one of INTERSECTS,
-            CONTAINS, OVERLAPS, WITHIN.
         [(input_table.col1, join_table.col2), ...]
     include_columns : List[Tuple[str, ...]]
         List of columns to include from either side of
@@ -154,11 +188,6 @@ def join(
     gpd.GeoDataFrame
         A GeoPandas dataframe.
     """
-    if input_property_filter is not None:
-        input_property_filter = input_property_filter.serialize()
-
-    if join_property_filter is not None:
-        join_property_filter = join_property_filter.serialize()
 
     params = {
         "input_product_id": input_product_id,
@@ -170,22 +199,71 @@ def join(
         "input_aoi": input_aoi,
         "join_property_filter": join_property_filter,
         "join_aoi": join_aoi,
+        "keep_all_input_rows": False,  # not used with non-spatial join
     }
 
-    response = requests.post(
-        f"{API_HOST}/products/features/join",
-        headers={"Authorization": get_token()},
-        json=params,
-        timeout=REQUEST_TIMEOUT,
-    )
-    check_response(response, "join feature")
-
-    buffer = BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
+    return _join(params)
 
 
-sjoin = partial(join, join_columns=None)
+def sjoin(
+    input_product_id: str,
+    join_product_id: str,
+    join_type: str,
+    include_columns: List[Tuple[str, ...]] = None,
+    input_property_filter: Properties = None,
+    join_property_filter: Properties = None,
+    input_aoi: dict = None,
+    join_aoi: dict = None,
+    keep_all_input_rows: bool = False,
+) -> gpd.GeoDataFrame:
+    """Spatially join features in a vector product.
+
+    Parameters
+    ----------
+    input_product_id : str
+        Product ID of the input table.
+    join_product_id : str
+        Product ID of the join table.
+    join_type : str
+        String indicating the type of join to perform.
+        Must be one of INNER, LEFT, RIGHT, INTERSECTS,
+            CONTAINS, OVERLAPS, WITHIN.
+    include_columns : List[Tuple[str, ...]]
+        List of columns to include from either side of
+        the join formatter as [(input_table.col1, input_table.col2),
+        (join_table.col3, join_table.col4)]. If None, all columns
+        from both tables are returned.
+    input_property_filter : Properties
+        Property filters to filter the input table.
+    join_property_filter : Properties
+        Property filters to filter the join table.
+    input_aoi : dict
+        A GeoJSON Feature to filter the input table.
+    join_aoi : dict
+        A GeoJSON Feature to filter the join table.
+    keep_all_input_rows: bool
+        Boolean indicating if the spatial join should keep all input rows
+        whether they satisfy the spatial query or not
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoPandas dataframe.
+    """
+
+    params = {
+        "input_product_id": input_product_id,
+        "join_type": join_type,
+        "join_product_id": join_product_id,
+        "join_columns": None,  # not used with spatial join
+        "include_columns": include_columns,
+        "input_property_filter": input_property_filter,
+        "input_aoi": input_aoi,
+        "join_property_filter": join_property_filter,
+        "join_aoi": join_aoi,
+        "keep_all_input_rows": keep_all_input_rows,
+    }
+
+    return _join(params)
 
 
 @backoff_wrapper
