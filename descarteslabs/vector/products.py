@@ -7,7 +7,7 @@ from .models import GenericFeatureBaseModel, VectorBaseModel
 from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
 
-REQUEST_TIMEOUT = 60
+REQUEST_TIMEOUT = 120
 
 
 def _check_tags(tags: Union[List[str], None] = None):
@@ -30,7 +30,6 @@ def _strip_null_values(d: dict) -> dict:
     Returns
     -------
     dict
-        The input dictionary with keys containing None values removed.
     """
     return {k: v for k, v in d.items() if v is not None}
 
@@ -46,26 +45,27 @@ def create(
     owners: Optional[List[str]] = None,
     model: Optional[VectorBaseModel] = GenericFeatureBaseModel,
 ) -> dict:
-    """Create a vector product.
+    """
+    Create a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of a Vector Table.
     name : str
-        Name of the vector product.
+        Name of the Vector Table.
     description : str, optional
-        Description of the vector product.
+        Description of the Vector Table.
     tags : list of str, optional
-        A list of tags to associate with the vector product.
+        A list of tags to associate with the Vector Table.
     readers : list of str, optional
-        A list of vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
     writers : list of str, optional
-        A list of vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
     owners : list of str, optional
-        A list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
     model : VectorBaseModel, optional
         A json schema describing the table
@@ -73,13 +73,19 @@ def create(
     Returns
     -------
     dict
-        Details of the created vector product.
     """
     _check_tags(tags)
+
+    if "geometry" in model.model_json_schema()["properties"].keys():
+        is_spatial = True
+    else:
+        is_spatial = False
+
     request_json = _strip_null_values(
         {
             "id": product_id,
             "name": name,
+            "is_spatial": is_spatial,
             "description": description,
             "tags": tags,
             "readers": readers,
@@ -101,17 +107,17 @@ def create(
 
 @backoff_wrapper
 def list(tags: Union[List[str], None] = None) -> List[dict]:
-    """List vector products.
+    """
+    List Vector Tables.
 
     Parameters
     ----------
     tags: List[str]
-        Optional list of tags a table must have to be included in the returned list.
+        Optional list of tags a Vector Table must have to be included in the returned list.
 
     Returns
     -------
-    list of dict
-        A list containing the details of each vector product where you have at least read access.
+    List[dict]
     """
     _check_tags(tags)
 
@@ -134,17 +140,17 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
 
 @backoff_wrapper
 def get(product_id: str) -> dict:
-    """Get a vector product.
+    """
+    Get a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of a Vector Table.
 
     Returns
     -------
     dict
-        Details of the vector product.
     """
     response = requests.get(
         f"{API_HOST}/products/{product_id}",
@@ -165,32 +171,32 @@ def update(
     writers: Optional[List[str]] = None,
     owners: Optional[List[str]] = None,
 ) -> dict:
-    """Update a vector product.
+    """
+    Save/update a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of a Vector Table.
     name : str
-        Name of the vector product.
+        Name of the Vector Table.
     description : str, optional
-        Description of the vector product.
+        Description of the Vector Table.
     tags : list of str, optional
-        A list of tags to associate with the vector product.
+        A list of tags to associate with the Vector Table.
     readers : list of str, optional
-        A list of vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
     writers : list of str, optional
-        A list of vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
     owners : list of str, optional
-        A list of vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+        A list of Vector Table owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
         "email:{email}".
 
     Returns
     -------
     dict
-        Details of the vector product.
     """
     _check_tags(tags)
     response = requests.patch(
@@ -213,13 +219,18 @@ def update(
 
 
 @backoff_wrapper
-def delete(product_id: str):
-    """Delete a vector product.
+def delete(product_id: str) -> None:
+    """
+    Delete a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of a Vector Table.
+
+    Returns
+    -------
+    None
     """
     response = requests.delete(
         f"{API_HOST}/products/{product_id}",

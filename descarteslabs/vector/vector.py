@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
+from datetime import datetime
 from typing import List, Literal, Optional, Tuple, Union
 
 import descarteslabs as dl
 import geopandas as gpd
 import ipyleaflet
+import pandas as pd
 import shapely
 from descarteslabs.utils import Properties
 
@@ -56,7 +57,7 @@ def _geojson_to_shape(gj: dict) -> shapely.geometry.base.BaseGeometry:
     Returns
     -------
     shp: shapely.geometry.base.BaseGeometry
-        Shapely shape for the geojson
+        Shapely shape for the geojson.
     """
     return shapely.geometry.shape(gj)
 
@@ -68,7 +69,7 @@ def _dl_aoi_to_shape(aoi: dl.geo.GeoContext) -> shapely.geometry.base.BaseGeomet
     Parameters
     ----------
     aoi: descarteslabs.geo.GeoContext
-        AOI for which we want a shapely shape
+        AOI for which we want a shapely shape.
 
     Returns
     -------
@@ -92,12 +93,12 @@ def _to_shape(
     Parameters
     ----------
     aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
-        Optinal aoi to convert to a shapely object
+        Optional AOI to convert to a shapely object.
 
     Returns
     -------
     shp: Union[shapely.geometry.base.BaseGeometry, None]
-        None if aoi is None, or a shapely representation of he aoi
+        None if aoi is None, or a shapely representation of the aoi.
     """
 
     if not aoi:
@@ -112,7 +113,7 @@ def _to_shape(
     elif issubclass(type(aoi), shapely.geometry.base.BaseGeometry):
         return aoi
     else:
-        raise ClientException(f'"{aoi}" not recognized as an aoi')
+        raise ClientException(f"'{aoi}' not recognized as an aoi!")
 
     return aoi
 
@@ -137,7 +138,7 @@ def _shape_to_geojson(shp: shapely.geometry.base.BaseGeometry) -> dict:
 
 class TableOptions:
     """
-    A class controling Table options and parameters.
+    A class for controlling Table options and parameters.
     """
 
     def __init__(
@@ -150,18 +151,18 @@ class TableOptions:
         columns: Optional[List[str]] = None,
     ):
         """
-        Initialize an instance of TableOptions.
+        Initialize a TableOptions instance.
 
         Parameters
         ----------
         product_id: str
-            Product ID of Vector Table.
+            Product ID of a Vector Table.
         aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
-            AOI associated with this TableOptions.
+            AOI to associate with this TableOptions.
         property_filter: Optional[Properties]
-            Property filter associated with this TableOptions.
+            Property filter to associate with this TableOptions.
         columns: Optional[List[str]]
-            List of columns to include in each query.
+            List of columns to include with this TableOptions.
         """
         self._product_id = product_id
         self._aoi = _to_shape(aoi)
@@ -171,7 +172,12 @@ class TableOptions:
     @property
     def product_id(self) -> str:
         """
-        Return the product ID associated with this TableOptions.
+        Return the product ID of this TableOptions.
+
+        Parameters
+        ----------
+        None
+
         Returns
         -------
         str
@@ -181,11 +187,16 @@ class TableOptions:
     @product_id.setter
     def product_id(self, product_id: str) -> None:
         """
-        Set the product ID associated with this TableOptions.
+        Set the product ID of this TableOptions.
+
+        Parameters
+        ----------
+        product_id: str
+            Product ID of a Vector Table.
 
         Returns
         -------
-        str
+        None
         """
         if not isinstance(product_id, str):
             raise TypeError("'product_id' must be of type <str>!")
@@ -194,7 +205,11 @@ class TableOptions:
     @property
     def aoi(self) -> shapely.geometry.shape:
         """
-        Return the aoi associated with this TableOptions.
+        Return the AOI option of this TableOptions.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -210,7 +225,12 @@ class TableOptions:
         ] = None,
     ) -> None:
         """
-        Set the aoi associated with this TableOptions.
+        Set the AOI option of this TableOptions.
+
+        Parameters
+        ----------
+        aoi: Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]
+            AOI of this TableOptions.
 
         Returns
         -------
@@ -221,7 +241,11 @@ class TableOptions:
     @property
     def property_filter(self) -> Properties:
         """
-        Return the property filter associated with this TableOptions.
+        Return the property_filter option of this TableOptions.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -232,7 +256,12 @@ class TableOptions:
     @property_filter.setter
     def property_filter(self, property_filter: Optional[Properties] = None) -> None:
         """
-        Set the property_filter associated with this TableOptions.
+        Set the property_filter option of this TableOptions.
+
+        Parameters
+        ----------
+        property_filter: Properties
+            property_filter option of this TableOptions.
 
         Returns
         -------
@@ -248,7 +277,11 @@ class TableOptions:
     @property
     def columns(self) -> List[str]:
         """
-        Return the columns associated with this TableOptions.
+        Return the columns option of this TableOptions.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -259,7 +292,12 @@ class TableOptions:
     @columns.setter
     def columns(self, columns: Optional[List[str]] = None) -> None:
         """
-        Set the columns associated with this TableOptions.
+        Set the columns option of this TableOptions.
+
+        Parameters
+        ----------
+        columns: List[str]
+            List of columns to include.
 
         Returns
         -------
@@ -276,21 +314,21 @@ class TableOptions:
 
 class Table:
     """
-    A class for creating and interacting with Vector products.
+    A class for creating and interacting with Vector Tables.
     """
 
     def __init__(
         self, table_parameters: Union[dict, str], options: TableOptions = None
     ):
         """
-        Initialize a Table instance.
+        Initialize a Vector Table instance.
 
         Users should create a Table instance via `Table.get` or `Table.create`.
 
         Parameters
         ----------
         product_parameters: Union[dict, str]
-            Dictionary of product parameters or the product id.
+            Dictionary of product parameters or the product ID of a Vector Table.
         """
         if isinstance(table_parameters, str):
             table_parameters = products_get(table_parameters)
@@ -315,23 +353,22 @@ class Table:
         columns: Optional[List[str]] = [],
     ) -> Table:
         """
-        Get a Table instance associated with a product id. Raise an exception if this `product_id` doesn't exit.
+        Get a Vector Table instance from a Vector Table product ID. Raise an exception if this `product_id` doesn't exit.
 
         Parameters
         ----------
         product_id: str
-            Product ID of Vector Table.
+            Product ID of the Vector Table.
         aoi: Optional[Union[dl.geo.GeoContext, dict, shapely.geometry.base.BaseGeometry]]
-            AOI associated with this TableOptions.
+            AOI to associate with this Vector Table.
         property_filter: Optional[Properties]
-            Property filter associated with this TableOptions.
+            Property filter to associate with this Vector Table.
         columns: Optional[List[str]]
-            List of columns to include in each query.
+            List of columns to include.
 
         Returns
         -------
-        table: Table
-            Table instance for the product ID.
+        Table
         """
         options = TableOptions(
             product_id=product_id,
@@ -345,34 +382,33 @@ class Table:
     @staticmethod
     def create(product_id, *args, **kwargs) -> Table:
         """
-        Create a Vector product.
+        Create a Vector Table.
 
         Parameters
         ----------
         product_id : str
-            ID of the Vector product.
+            Product ID of the Vector Table.
         name : str
-            Name of the Vector product.
+            Name of the Vector Table.
         description : str, optional
-            Description of the Vector product.
+            Description of the Vector Table.
         tags : list of str, optional
-            A list of tags to associate with the Vector product.
+            A list of tags to associate with the Vector Table.
         readers : list of str, optional
-            A list of Vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector Table readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         writers : list of str, optional
-            A list of Vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector Table writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         owners : list of str, optional
-            A list of Vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
+            A list of Vector Table owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
             "email:{email}".
         model : VectorBaseModel, optional
-            A model that provides a user provided schema for the Vector table.
+            A model that provides a user provided schema for the Vector Table.
 
         Returns
         -------
-        table: Table
-            Table instace representing new product
+        Table
         """
 
         prefix = dl.auth.Auth().payload["org"]
@@ -384,55 +420,100 @@ class Table:
             table_exists = False
 
         if table_exists:
-            raise ClientException(f'A table with id "{product_id}" already exists')
+            raise ClientException(f"A Table with ID '{product_id}' already exists!")
 
         return Table(products_create(product_id, *args, **kwargs))
 
     @staticmethod
     def list(tags: Optional[List[str]] = None) -> List[Table]:
         """
-        List available Vector products.
+        List available Vector Tables.
 
         Parameters
         ----------
         tags: list of str
-            Optional list of tags a table must have to be returned.
+            Optional list of tags a Vector Table must have to be returned.
 
         Returns
         -------
-        products: list of Table
-            List of table instances.
+        List[Table]
         """
         return [Table(d) for d in products_list(tags=tags)]
 
     @property
     def id(self) -> str:
         """
-        Return the ID of the table.
+        Return the product ID of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        id: str
-            Table ID
+        str
         """
         return self._id
 
     @property
-    def name(self) -> str:
+    def created(self) -> datetime:
         """
-        Return the name of the table.
+        Return the datetime this Vector Table was created.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        name: str
-            Table name
+        datetime
+        """
+        if not self._created:
+            return self._created
+        try:
+            return datetime.fromisoformat(self._created)
+        except ValueError:
+            return datetime.strptime(self._created, "%Y-%m-%dT%H:%M:%S.%f")
+
+    @property
+    def is_spatial(self) -> bool:
+        """
+        Return a boolean indicating whether or not this Vector Table is spatial.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        bool
+        """
+        return self._is_spatial
+
+    @property
+    def name(self) -> str:
+        """
+        Return the name of this Vector Table.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        str
         """
         return self._name
 
     @name.setter
     def name(self, value: str) -> None:
         """
-        Set the name of the table.
+        Set the name of this Vector Table.
+
+        Parameters
+        ----------
+        value: str
+            Name of the Vector Table.
 
         Returns
         -------
@@ -441,23 +522,32 @@ class Table:
         if isinstance(value, str):
             self._name = value
         else:
-            raise ValueError("Table 'name' must be of type 'str'")
+            raise ValueError("Table 'name' must be of type <str>!")
 
     @property
     def description(self) -> str:
         """
-        Return the description of the table.
+        Return the description of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        None
+        str
         """
         return self._description
 
     @description.setter
     def description(self, value: str) -> None:
         """
-        Set the description of the table.
+        Set the description of this Vector Table.
+
+        Parameters
+        ----------
+        value: str
+            Description of the Vector Table.
 
         Returns
         -------
@@ -466,25 +556,32 @@ class Table:
         if isinstance(value, str):
             self._description = value
         else:
-            raise ValueError("Table 'description' must be of type 'str'")
+            raise ValueError("Table 'description' must be of type <str>!")
 
     @property
-    def tags(self) -> list:
+    def tags(self) -> List[str]:
         """
-        Return the tags of the table.
+        Return the tags of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        tags: list
-            Table tags
+        List[str]
         """
         return self._tags
 
     @tags.setter
-    def tags(self, value: str) -> None:
+    def tags(self, value: List[str]) -> None:
         """
-        Set the tags for the table.
+        Set the tags for this Vector Table.
 
+        Parameters
+        ----------
+        value: List[str]
+             A list of tags to associate with the Vector Table.
         Returns
         -------
         None
@@ -492,24 +589,32 @@ class Table:
         if isinstance(value, list):
             self._tags = value
         else:
-            raise ValueError("Table 'tags' must be of type 'list'")
+            raise ValueError("Table 'tags' must be of type <list>!")
 
     @property
-    def readers(self) -> list:
+    def readers(self) -> List[str]:
         """
-        Return the readers of the table.
+        Return the readers of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        readers: list
-            Table readers
+        List[str]
         """
         return self._readers
 
     @readers.setter
-    def readers(self, value: list) -> None:
+    def readers(self, value: List[str]) -> None:
         """
-        Set the readers for the table.
+        Set the readers for this Vector Table.
+
+        Parameters
+        ----------
+        value: List[str]
+            Readers for this Vector Table.
 
         Returns
         -------
@@ -518,24 +623,32 @@ class Table:
         if isinstance(value, list):
             self._readers = value
         else:
-            raise ValueError("Table 'readers' must be of type 'list'")
+            raise ValueError("Table 'readers' must be of type <list>!")
 
     @property
-    def writers(self) -> list:
+    def writers(self) -> List[str]:
         """
-        Return the writers of the table.
+        Return the writers of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        writers: list
-            Table writers
+        List[str]
         """
         return self._writers
 
     @writers.setter
-    def writers(self, value: list) -> None:
+    def writers(self, value: List[str]) -> None:
         """
-        Set the writers for the table.
+        Set the writers for the Vector Table.
+
+        Parameters
+        ----------
+        value: List[str]
+             Writers for the Vector Table
 
         Returns
         -------
@@ -544,24 +657,32 @@ class Table:
         if isinstance(value, list):
             self._writers = value
         else:
-            raise ValueError("Table 'writers' must be of type 'list'")
+            raise ValueError("Table 'writers' must be of type <list>!")
 
     @property
-    def owners(self) -> list:
+    def owners(self) -> List[str]:
         """
-        Return the owners of the table.
+        Return the owners of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        owners: list
-            Table owners
+        List[str]
         """
         return self._owners
 
     @owners.setter
-    def owners(self, value: list) -> None:
+    def owners(self, value: List[str]) -> None:
         """
-        Set the owners for the table.
+        Set the owners for this Vector Table.
+
+        Parameters
+        ----------
+        value: List[str]
+            Owners of this Vector Table.
 
         Returns
         -------
@@ -570,41 +691,50 @@ class Table:
         if isinstance(value, list):
             self._owners = value
         else:
-            raise ValueError("Table 'owners' must be of type 'list'")
+            raise ValueError("Table 'owners' must be of type <list>!")
 
     @property
     def model(self) -> dict:
         """
-        Return the model of the table.
+        Return the model of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        model: dict
-            Table model
+        dict
         """
         return self._model
 
     @property
-    def columns(self) -> list:
+    def columns(self) -> List[str]:
         """
-        Return the column names of the table.
+        Return the column names of this Vector Table.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        columns: list
-            Table columns
+        List[str]
         """
         return list(self._model["properties"].keys())
 
     @property
     def parameters(self) -> dict:
         """
-        Return the table parameters as dictionary.
+        Return the Vector Table parameters as dictionary.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        parameters: dict
-            Table parameters
+        dict
         """
 
         keys = [
@@ -625,49 +755,47 @@ class Table:
 
         return params
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
-        Generate a string representation of this Table instance.
-
-        Return
-        ------
-        json: str
-            JSON representation of this table.
-        """
-        return json.dumps(self.parameters)
-
-    def __str__(self):
-        """
-        Generate a name for this.
-
-        Return
-        ------
-        name: str
-            Table name
-        """
-        return self.name
-
-    def save(self) -> None:
-        """
-        Save/update this Vector product.
+        Generate a string representation of this Vector Table.
 
         Parameters
         ----------
-        name : str
-            New name of the Vector product.
-        description : str, optional
-            New Description of the Vector product.
-        tags : list of str, optional
-            New list of tags to associate with the Vector product.
-        readers : list of str, optional
-            New list of Vector product readers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
-            "email:{email}".
-        writers : list of str, optional
-            New list of Vector product writers. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
-            "email:{email}".
-        owners : list of str, optional
-            New list of Vector product owners. Can take the form "user:{namespace}", "group:{group}", "org:{org}", or
-            "email:{email}".
+        None
+
+        Return
+        ------
+        str
+        """
+        if self.created:
+            return f"Table: {self.name}\n  id: {self.id}\n  created: {self.created.strftime('%a %b %d %H:%M:%S %Y')}"
+        return f"Table: {self.name}\n  id: {self.id}"
+
+    def __str__(self) -> str:
+        """
+        Generate a string representation of this Vector Table.
+
+        Parameters
+        ----------
+        None
+
+        Return
+        ------
+        str
+        """
+        return self.__repr__()
+
+    def save(self) -> None:
+        """
+        Save/update this Vector Table.
+
+        Parameters
+        ----------
+        None
+
+        Return
+        ------
+        None
         """
         products_update(
             product_id=self.id,
@@ -681,10 +809,13 @@ class Table:
 
     def add(
         self,
-        dataframe: gpd.GeoDataFrame,
-    ) -> FeatureCollection:
+        dataframe: Union[pd.DataFrame, gpd.GeoDataFrame],
+    ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
         """
-        Add a GeoPandas dataframe to this table.
+        Add a dataframe to this table. If the Vector Table has a `geometry` column
+        the dataframe must be a GeoPandas GeoDataFrame, otherwise a Pandas DataFrame
+        must be provided. Note that the returned dataframe UUID attribution for each
+        row.
 
         Parameters
         ----------
@@ -693,44 +824,43 @@ class Table:
 
         Returns
         -------
-        FeatureCollection
-            Added features. Note that this will differ from the input in that UUIDs have been attributed.
+        Union[pd.DataFrame, gpd.GeoDataFrame]
         """
 
-        return FeatureCollection(self.id, features_add(self.id, dataframe))
+        return features_add(
+            product_id=self.id, dataframe=dataframe, is_spatial=self.is_spatial
+        )
 
     def get_feature(self, feature_id: str) -> Feature:
         """
-        Get a specific feature from this Table instance.
+        Get a Vector Feature from this Vector Table instance.
 
         Parameters
         ----------
         feature_id: str
-            Feature ID for the feature to get.
+            Vector Feature ID for the feature to get.
 
         Returns
         -------
         Feature
-            A Vector Feature instance.
         """
-        return Feature.get(f"{self.id}:{feature_id}")
+        return Feature.get(id=f"{self.id}:{feature_id}")
 
-    def try_get_feature(self, feature_id: str) -> Union[Feature, None]:
+    def try_get_feature(self, feature_id: str) -> Feature:
         """
-        Get a specific feature from this Table instance. If it isn't present, return None.
+        Get a Vector Feature from this Vector Table instance.
 
         Parameters
         ----------
         feature_id: str
-            Feature ID for the feature to get.
+            Vector Feature ID for the feature to get.
 
         Returns
         -------
         Feature
-            A Vector Feature instance.
         """
         try:
-            return Feature.get(f"{self.id}:{feature_id}")
+            return Feature.get(id=f"{self.id}:{feature_id}")
         except ClientException:
             return None
 
@@ -742,7 +872,9 @@ class Table:
         override_options: TableOptions = None,
     ) -> DLVectorTileLayer:
         """
-        Visualize this Table as an `ipyleaflet` VectorTileLayer.
+        Visualize this Vector Table as an `ipyleaflet` VectorTileLayer.
+        The property_filter and the columns specified with the Table
+        options will be honored but the AOI option will be ignored.
 
         Parameters
         ----------
@@ -765,11 +897,12 @@ class Table:
         options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
-            raise TypeError("'options' must be of type <TableOptions>.")
+            raise TypeError("'options' must be of type <TableOptions>!")
 
         lyr = create_layer(
             product_id=self.id,
             name=name,
+            is_spatial=self.is_spatial,
             property_filter=options.property_filter,
             columns=options.columns,
             vector_tile_layer_styles={self.id: vector_tile_layer_styles},
@@ -781,10 +914,15 @@ class Table:
         map.add_layer(lyr)
         return lyr
 
-    def search(self, override_options: TableOptions = None) -> FeatureCollection:
+    def search(
+        self, override_options: TableOptions = None
+    ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
         """
-        Method to execute query and return a Vector FeatureCollection
-        (GeoPandas dataframe) with the selected items.
+        Method to execute a query/search on this Vector Table, returning a
+        dataframe. Table options will be honored when executing the query.
+        If the Vector Table has a `geometry` column and the `geometry` column
+        is included in the Table options, a GeoPandas GeoDataFrame will be
+        returned, otherwise a Pandas DataFrame will be returned.
 
         Parameters
         ----------
@@ -793,23 +931,20 @@ class Table:
 
         Returns
         -------
-        df: FeatureCollection
-            A Vector FeatureCollection.
+        Union[pd.DataFrame, gpd.GeoDataFrame]
         """
 
         options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
-            raise TypeError("'options' must be of type <TableOptions>.")
+            raise TypeError("'options' must be of type <TableOptions>!")
 
-        df = features_query(
+        return features_query(
             options.product_id,
             property_filter=options.property_filter,
             aoi=_shape_to_geojson(options.aoi),
             columns=options.columns,
         )
-
-        return FeatureCollection(options.product_id, df)
 
     def join(
         self,
@@ -817,15 +952,19 @@ class Table:
         join_type: Literal["INNER", "LEFT", "RIGHT"],
         join_columns: List[Tuple[str, str]],
         override_options: Optional[TableOptions] = None,
-    ) -> FeatureCollection:
+    ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
         """
-        Method to execute join and return a Vector FeatureCollection
-        (GeoPandas dataframe) with the selected items.
+        Method to execute a relational join between two Vector Tables,
+        returning a dataframe. Table options will be honored when executing
+        the query. If either Vector Table has a `geometry` column and either
+        Vector Table included the 'geometry' column in the Table options, a
+        GeoPandas GeoDataFrame will be returned, otherwise a Pandas DataFrame
+        will be returned.
 
         Parameters
         ----------
         join_table: [Union[Table, TableOptions]]
-            The table to join. Can be either Table of TableOptions.
+            The Vector Table or TableOptions to join.
         join_type: Literal["INNER", "LEFT", "RIGHT"]
             The type of join to perform. Must be one of INNER,
             LEFT, or RIGHT.
@@ -837,24 +976,23 @@ class Table:
 
         Returns
         -------
-        df: FeatureCollection
-            A Vector FeatureCollection.
+        Union[pd.DataFrame, gpd.GeoDataFrame]
         """
         options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
-            raise TypeError("'override_options' must be of type <TableOptions>.")
+            raise TypeError("'override_options' must be of type <TableOptions>!")
 
         if isinstance(join_table, TableOptions):
             pass
         elif isinstance(join_table, Table):
             join_table = join_table.options
         else:
-            raise TypeError("'join_table' must be of type <TableOptions>.")
+            raise TypeError("'join_table' must be of type <TableOptions>!")
 
         include_columns = [tuple(options.columns), tuple(join_table.columns)]
 
-        df = features_join(
+        return features_join(
             input_product_id=options.product_id,
             join_product_id=join_table.product_id,
             join_type=join_type,
@@ -866,23 +1004,25 @@ class Table:
             join_aoi=_shape_to_geojson(join_table.aoi),
         )
 
-        return FeatureCollection(options.product_id, df)
-
     def sjoin(
         self,
         join_table: [Union[Table, TableOptions]],
         join_type: Literal["INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"],
         override_options: Optional[TableOptions] = None,
         keep_all_input_rows: Optional[bool] = False,
-    ) -> FeatureCollection:
+    ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
         """
-        Method to execute spatial join and return a Vector FeatureCollection
-        (GeoPandas dataframe) with the selected items.
+        Method to execute a spatial join between two Vector Tables,
+        returning a dataframe. Table options will be honored when executing
+        the query. Both Vector Tables must have a `geometry` column. If either
+        Vector Table included the 'geometry' column in the Table options, a
+        GeoPandas GeoDataFrame will be returned, otherwise a Pandas DataFrame
+        will be returned.
 
         Parameters
         ----------
         join_table: [Union[Table, TableOptions]]
-            The table to join. Can be either Table of TableOptions.
+            The Vector Table or TableOptions to join.
         join_type: Literal["INTERSECTS", "CONTAINS", "OVERLAPS", "WITHIN"]
             The type of join to perform. Must be one of INTERSECTS,
             CONTAINS, OVERLAPS, WITHIN.
@@ -891,24 +1031,29 @@ class Table:
 
         Returns
         -------
-        df: FeatureCollection
-            A Vector FeatureCollection.
+        Union[pd.DataFrame, gpd.GeoDataFrame]
         """
         options = override_options if override_options else self.options
 
         if not isinstance(options, TableOptions):
-            raise TypeError("'override_options' must be of type <TableOptions>.")
+            raise TypeError("'override_options' must be of type <TableOptions>!")
 
         if isinstance(join_table, TableOptions):
-            pass
+            join_is_spatial = Table.get(product_id=join_table.product_id).is_spatial
         elif isinstance(join_table, Table):
+            join_is_spatial = join_table.is_spatial
             join_table = join_table.options
         else:
-            raise TypeError("'join_table' must be of type <TableOptions>.")
+            raise TypeError("'join_table' must be of type <TableOptions>!")
+
+        if not self.is_spatial and not join_is_spatial:
+            raise TypeError(
+                "Both Tables must have a geometry column for spatial joins!"
+            )
 
         include_columns = [tuple(options.columns), tuple(join_table.columns)]
 
-        df = features_sjoin(
+        return features_sjoin(
             input_product_id=options.product_id,
             join_product_id=join_table.product_id,
             join_type=join_type,
@@ -920,13 +1065,16 @@ class Table:
             keep_all_input_rows=keep_all_input_rows,
         )
 
-        return FeatureCollection(options.product_id, df)
-
     def _aggregate(
         self, statistic: Statistic, override_options: TableOptions
     ) -> Union[int, dict]:
         """
-        Private method for handling aggregate functions.
+        Private method for handling aggregate functions. The statistic
+        COUNT will always return an integer. All other statistics will
+        return a dictionary of results. Keys of the dictionary will be
+        the column names requested appended with the statistic
+        ('column_1.STATISTIC') and values are the result of the aggregate
+        statistic.
 
         Parameters
         ----------
@@ -938,19 +1086,14 @@ class Table:
         Returns
         -------
         Union[int, dict]
-            The statistic COUNT will always return an integer. All
-            other statistics will return a dictionary of results.
-            Keys of the dictionary will be the column names requested
-            appended with the statistic ('column_1.STATISTIC') and values
-            are the result of the aggregate statistic.
         """
         options = override_options if override_options else self.options
 
         if not isinstance(statistic, Statistic):
-            raise TypeError("'statistic' must be of type <Statistic>.")
+            raise TypeError("'statistic' must be of type <Statistic>!")
 
         if not isinstance(options, TableOptions):
-            raise TypeError("'options' must be of type <TableOptions>.")
+            raise TypeError("'options' must be of type <TableOptions>!")
 
         return features_aggregate(
             product_id=options.product_id,
@@ -965,7 +1108,8 @@ class Table:
         override_options: Optional[TableOptions] = None,
     ) -> int:
         """
-        Method to return the row count of the vector product.
+        Method to return the row count of a Vector Table. Table options
+        will be honored when counting rows.
 
         Parameters
         ----------
@@ -977,14 +1121,20 @@ class Table:
         int
         """
 
-        return self._aggregate(Statistic.COUNT, override_options)
+        return self._aggregate(
+            statistic=Statistic.COUNT, override_options=override_options
+        )
 
     def sum(
         self,
         override_options: Optional[TableOptions] = None,
     ) -> dict:
         """
-        Method to return the row count of the vector product.
+        Method to calculate the column sum for this Vector Table.
+        Table options will be honored when calculating the sum. The keys
+        of the returned dictionary correspond to the columns requested,
+        appended with the statistic ('column_1.SUM') and the values
+        are the result of the aggregate statistic.
 
         Parameters
         ----------
@@ -993,20 +1143,23 @@ class Table:
 
         Returns
         -------
-        dict :
-            Dictionary of results. Keys the column names requested
-            appended with the statistic ('column_1.SUM') and values
-            are the result of the aggregate statistic.
+        dict
         """
 
-        return self._aggregate(Statistic.SUM, override_options)
+        return self._aggregate(
+            statistic=Statistic.SUM, override_options=override_options
+        )
 
     def min(
         self,
         override_options: Optional[TableOptions] = None,
     ) -> dict:
         """
-        Method to return the row count of the vector product.
+        Method to calculate the column minumum for this Vector Table.
+        Table options will be honored when calculating the min. The keys
+        of the returned dictionary correspond to the columns requested,
+        appended with the statistic ('column_1.MIN') and the values
+        are the result of the aggregate statistic.
 
         Parameters
         ----------
@@ -1015,20 +1168,23 @@ class Table:
 
         Returns
         -------
-        dict :
-            Dictionary of results. Keys the column names requested
-            appended with the statistic ('column_1.MIN') and values
-            are the result of the aggregate statistic.
+        dict
         """
 
-        return self._aggregate(Statistic.MIN, override_options)
+        return self._aggregate(
+            statistic=Statistic.MIN, override_options=override_options
+        )
 
     def max(
         self,
         override_options: Optional[TableOptions] = None,
     ) -> dict:
         """
-        Method to return the row count of the vector product.
+        Method to calculate the column maximum for this Vector Table.
+        Table options will be honored when calculating the max. The keys
+        of the returned dictionary correspond to the columns requested,
+        appended with the statistic ('column_1.MAX') and the values
+        are the result of the aggregate statistic.
 
         Parameters
         ----------
@@ -1037,20 +1193,23 @@ class Table:
 
         Returns
         -------
-        dict :
-            Dictionary of results. Keys the column names requested
-            appended with the statistic ('column_1.MAX') and values
-            are the result of the aggregate statistic.
+        dict
         """
 
-        return self._aggregate(Statistic.MAX, override_options)
+        return self._aggregate(
+            statistic=Statistic.MAX, override_options=override_options
+        )
 
     def mean(
         self,
         override_options: Optional[TableOptions] = None,
     ) -> dict:
         """
-        Method to return the row count of the vector product.
+        Method to calculate the column mean/average for this Vector Table.
+        Table options will be honored when calculating the mean. The keys
+        of the returned dictionary correspond to the columns requested,
+        appended with the statistic ('column_1.MEAN') and the values
+        are the result of the aggregate statistic.
 
         Parameters
         ----------
@@ -1059,17 +1218,16 @@ class Table:
 
         Returns
         -------
-        dict :
-            Dictionary of results. Keys the column names requested
-            appended with the statistic ('column_1.MEAN') and values
-            are the result of the aggregate statistic.
+        dict
         """
 
-        return self._aggregate(Statistic.MEAN, override_options)
+        return self._aggregate(
+            statistic=Statistic.MEAN, override_options=override_options
+        )
 
     def reset_options(self) -> None:
         """
-        Method to reset/clear current table options.
+        Method to reset/clear current TableOptions.
 
         Parameters
         ----------
@@ -1085,172 +1243,152 @@ class Table:
 
     def delete(self) -> None:
         """
-        Delete this Vector product.
-
-        This function will disable all subsequent non-static method calls.
-        """
-        products_delete(self.id)
-
-
-class FeatureCollection(gpd.GeoDataFrame):
-    """
-    A class for interacting with Vector features.
-    """
-
-    def __init__(self, id: str, *args, **kwargs):
-        """
-        Initialize a FeatureCollection instance.
-
-        Users should create a Feature instance via `FeatureSearch.collect`.
+        Delete this Vector Table. This method will disable all subsequent non-static method calls.
 
         Parameters
         ----------
-        id: str
-            The feature id.
-        """
-        super().__init__(*args, **kwargs)
-
-        self._id = id
-
-    @property
-    def id(self):
-        """
-        Return the product id of the Table.
+        None
 
         Returns
         -------
-        product_id: str
-            Table product ID
+        None
         """
-        return self._id
-
-    @property
-    def table(self):
-        """
-        Return the Table of the FeatureCollection.
-
-        Returns
-        -------
-        table: Table
-            Table
-        """
-        return Table.get(self._id)
+        products_delete(product_id=self.id)
 
 
 class Feature:
     """
-    A class for interacting with a Vector feature.
+    A class for interacting with a Vector Feature.
     """
 
-    def __init__(self, id: str, df: gpd.GeoDataFrame):
+    def __init__(self, id: str, dataframe: Union[pd.DataFrame, gpd.GeoDataFrame]):
         """
-        Initialize a Feature instance.
+        Initialize a Vector Feature instance.
 
-        Users should create a Feature instance via `Table.get_feature`.
+        Users should create a Vector Feature instance via `Table.get_feature`
+        or `Feature.get`.
 
         Parameters
         ----------
         id: str
-            The feature id.
+            ID of the Vector Feature.
+        dataframe: Union[pd.DataFrame, gpd.GeoDataFrame]
+            Pandas DataFrame or a GeoPandas GeoDataFrame.
         """
+
+        if isinstance(dataframe, gpd.GeoDataFrame):
+            self._is_spatial = True
+        elif isinstance(dataframe, pd.DataFrame):
+            self._is_spatial = False
+        else:
+            raise TypeError(
+                "'dataframe' must be of type <pd.DataFrame> or <gpd.GeoDataFrame>!"
+            )
         self._id = id
         self._values = {}
-        for k, v in df.to_dict().items():
+        for k, v in dataframe.to_dict().items():
             self._values[k] = v[0]
 
     @property
-    def values(self):
+    def is_spatial(self) -> bool:
         """
-        Return the id of the Vector Feature.
+        Return a boolean indicating whether or not this Vector Feature is spatial.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        id: str
-            Feature ID
+        bool
+        """
+        return self._is_spatial
+
+    @property
+    def values(self) -> dict:
+        """
+        Return a dictionary of colum/value pairs for this Vector Feature.
+
+        Returns
+        -------
+        dict
         """
         return self._values
 
     @values.setter
-    def values(self, key, value):
+    def values(self, key, value) -> None:
         """
-        Return the id of the Vector Feature.
+        Set a colum/value pair for this Vector Feature.
 
         Returns
         -------
-        id: str
-            Feature ID
+        None
         """
         self._values[key] = value
 
     @property
-    def id(self):
+    def id(self) -> str:
         """
-        Return the id of the Vector Feature.
+        Return the ID of this Vector Feature.
 
         Returns
         -------
-        id: str
-            Feature ID
+        str
         """
         return self._id
 
     @property
-    def product_id(self):
+    def product_id(self) -> str:
         """
-        Return the product id of the Table.
+        Return the Vector Table product ID of this Vector Feature.
 
         Returns
         -------
-        product_id: str
-            Table product ID
+        str
         """
         return ":".join(self._id.split(":")[:-1])
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
-        Return the name/uuid of the Vector Feature.
+        Return the name/uuid of ths Vector Feature.
 
         Returns
         -------
-        name: str
-            Feature name
+        str
         """
         return self._id.split(":")[-1]
 
     @property
-    def table(self):
+    def table(self) -> Table:
         """
-        Return the Table of the FeatureCollection.
+        Return the Vector Table of this Vector Feature.
 
         Returns
         -------
-        table: Table
-            Table
+        Table
         """
-        return Table.get(self.product_id)
+        return Table.get(product_id=self.product_id)
 
     @staticmethod
     def get(id: str) -> Feature:
         """
-        Get a Feature instance associated with a Vector Feature ID.
+        Get a Vector Feature instance associated with an ID.
 
         Parameters
         ----------
         id: str
-            ID of Feature
+            ID of the Vector Feature.
 
         Returns
         -------
-        feature: Feature
-            Feature instance for the feature ID.
+        Feature
         """
         pid = ":".join(id.split(":")[0:-1])
         fid = id.split(":")[-1]
 
-        df = features_get(pid, fid)
-
-        return Feature(id, df)
+        dataframe = features_get(product_id=pid, feature_id=fid)
+        return Feature(id=id, dataframe=dataframe)
 
     def save(self) -> None:
         """
@@ -1264,8 +1402,17 @@ class Feature:
         -------
         None
         """
-        gdf = gpd.GeoDataFrame.from_features([self], crs="EPSG:4326")
-        features_update(self.product_id, self.name, gdf)
+
+        if self.is_spatial:
+            dataframe = gpd.GeoDataFrame.from_features([self], crs="EPSG:4326")
+        else:
+            dataframe = pd.DataFrame([self.values])
+        features_update(
+            product_id=self.product_id,
+            feature_id=self.name,
+            dataframe=dataframe,
+            is_spatial=self.is_spatial,
+        )
 
     def delete(self) -> None:
         """
@@ -1279,13 +1426,15 @@ class Feature:
         -------
         None
         """
-        features_delete(self.product_id, self.name)
+        features_delete(product_id=self.product_id, feature_id=self.name)
 
     @property
-    def __geo_interface__(self):
-        return {
-            "geometry": self.values["geometry"].__geo_interface__,
-            "properties": {
-                c: self.values[c] for c in self.table.columns if c != "geometry"
-            },
-        }
+    def __geo_interface__(self) -> Union[dict, None]:
+        if self.is_spatial:
+            return {
+                "geometry": self.values["geometry"].__geo_interface__,
+                "properties": {
+                    c: self.values[c] for c in self.table.columns if c != "geometry"
+                },
+            }
+        return None

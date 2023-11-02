@@ -6,11 +6,12 @@ from io import BytesIO
 from typing import List, Tuple, Union
 
 import geopandas as gpd
+import pandas as pd
 import requests
 from descarteslabs.utils import Properties
 
-from .common import API_HOST, get_token
-from .util import backoff_wrapper, check_response
+from .common import API_HOST, TYPES, get_token
+from .util import backoff_wrapper, check_response, response_to_dataframe
 
 REQUEST_TIMEOUT = 60
 
@@ -28,43 +29,46 @@ class Statistic(str, Enum):
 
 
 @backoff_wrapper
-def add(product_id: str, dataframe: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Add features to a vector product.
+def add(
+    product_id: str, dataframe: Union[gpd.GeoDataFrame, pd.DataFrame], is_spatial: bool
+) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Add features to a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
-    data : gpd.GeoDataFrame
-        The GeoPandas dataframe to add.
-
+        Product ID of the Vector Table.
+    dataframe : Union[gpd.GeoDataFrame, pd.DataFrame]
+        A GeoPandas GeoDataFrame or a Pandas DataFrame to add.
+    is_spatial: bool
+        Boolean indicating whether or not this data is spatial.
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe of the added features.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
     """
 
-    if not isinstance(dataframe, gpd.GeoDataFrame):
-        raise TypeError(f"Unsupported data type {type(dataframe)}")
+    if not is_spatial and not isinstance(dataframe, pd.DataFrame):
+        raise TypeError("'dataframe' must be of type <pd.DataFrame>!")
+    elif is_spatial and not isinstance(dataframe, gpd.GeoDataFrame):
+        raise TypeError("'dataframe' must be of type <gpd.GeoDataFrame>!")
 
     buffer = BytesIO()
     dataframe.to_parquet(buffer, index=False)
     buffer.seek(0)
 
-    files = {"file": ("data.parquet", buffer, "application/octet-stream")}
+    files = {"file": ("vector.parquet", buffer, "application/octet-stream")}
 
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "is_spatial": str(is_spatial)},
         files=files,
         timeout=REQUEST_TIMEOUT,
     )
 
     check_response(response, "add feature")
 
-    buffer = BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
+    return response_to_dataframe(response=response)
 
 
 @backoff_wrapper
@@ -73,13 +77,14 @@ def query(
     property_filter: Properties = None,
     aoi: dict = None,
     columns: list = None,
-) -> gpd.GeoDataFrame:
-    """Query features in a vector product.
+) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Query features in a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of the Vector Table.
     property_filter : Properties, optional
         Property filters to filter the product with.
     aoi : dict, optional
@@ -89,8 +94,7 @@ def query(
 
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
     """
     if property_filter is not None:
         property_filter = property_filter.serialize()
@@ -102,14 +106,13 @@ def query(
     )
     check_response(response, "query feature")
 
-    buffer = BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
+    return response_to_dataframe(response=response)
 
 
 @backoff_wrapper
-def _join(params: dict) -> gpd.GeoDataFrame:
-    """internal join method.
+def _join(params: dict) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Internal join function.
 
     Parameters
     ----------
@@ -118,8 +121,7 @@ def _join(params: dict) -> gpd.GeoDataFrame:
 
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
     """
     params = deepcopy(params)
 
@@ -139,9 +141,7 @@ def _join(params: dict) -> gpd.GeoDataFrame:
     )
     check_response(response, "join feature")
 
-    buffer = BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
+    return response_to_dataframe(response=response)
 
 
 def join(
@@ -154,39 +154,39 @@ def join(
     join_property_filter: Properties = None,
     input_aoi: dict = None,
     join_aoi: dict = None,
-) -> gpd.GeoDataFrame:
-    """Join features in a vector product.
+) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Execute relational join between two Vector Tables.
 
     Parameters
     ----------
     input_product_id : str
-        Product ID of the input table.
+        Product ID of the input Vector Table.
     join_product_id : str
-        Product ID of the join table.
+        Product ID of the join Vector Table.
     join_type : str
         String indicating the type of join to perform.
         Must be one of INNER, LEFT, RIGHT, INTERSECTS,
             CONTAINS, OVERLAPS, WITHIN.
     join_columns : List[Tuple[str, str]]
-        List of columns to join the input and join table.
+        List of columns to join the input and join Vector Table.
         [(input_table.col1, join_table.col2), ...]
     include_columns : List[Tuple[str, ...]]
         List of columns to include from either side of
-        the join formatter as [(input_table.col1, input_table.col2),
+        the join formatted as [(input_table.col1, input_table.col2),
         (join_table.col3, join_table.col4)]. If None, all columns
-        from both tables are returned.
+        from both Vector Tables are returned.
     input_property_filter : Properties
-        Property filters to filter the input table.
+        Property filters to filter the input Vector Table.
     join_property_filter : Properties
-        Property filters to filter the join table.
+        Property filters to filter the join Vector Table.
     input_aoi : dict
-        A GeoJSON Feature to filter the input table.
+        A GeoJSON Feature to filter the input Vector Table.
     join_aoi : dict
-        A GeoJSON Feature to filter the join table.
+        A GeoJSON Feature to filter the join Vector Table.
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
     """
 
     params = {
@@ -215,39 +215,39 @@ def sjoin(
     input_aoi: dict = None,
     join_aoi: dict = None,
     keep_all_input_rows: bool = False,
-) -> gpd.GeoDataFrame:
-    """Spatially join features in a vector product.
+) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Execute spatial join between two Vector Tables.
 
     Parameters
     ----------
     input_product_id : str
-        Product ID of the input table.
+        Product ID of the input Vector Table.
     join_product_id : str
-        Product ID of the join table.
+        Product ID of the join Vector Table.
     join_type : str
         String indicating the type of join to perform.
         Must be one of INNER, LEFT, RIGHT, INTERSECTS,
             CONTAINS, OVERLAPS, WITHIN.
     include_columns : List[Tuple[str, ...]]
         List of columns to include from either side of
-        the join formatter as [(input_table.col1, input_table.col2),
+        the join formatted as [(input_table.col1, input_table.col2),
         (join_table.col3, join_table.col4)]. If None, all columns
-        from both tables are returned.
+        from both Vector Tables are returned.
     input_property_filter : Properties
-        Property filters to filter the input table.
+        Property filters to filter the input Vector Table.
     join_property_filter : Properties
-        Property filters to filter the join table.
+        Property filters to filter the join Vector Table.
     input_aoi : dict
-        A GeoJSON Feature to filter the input table.
+        A GeoJSON Feature to filter the input Vector Table.
     join_aoi : dict
-        A GeoJSON Feature to filter the join table.
-    keep_all_input_rows: bool
+        A GeoJSON Feature to filter the join Vector Table.
+    keep_all_input_rows : bool
         Boolean indicating if the spatial join should keep all input rows
-        whether they satisfy the spatial query or not
+        whether they satisfy the spatial query or not.
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
     """
 
     params = {
@@ -267,20 +267,21 @@ def sjoin(
 
 
 @backoff_wrapper
-def get(product_id: str, feature_id: str) -> gpd.GeoDataFrame:
-    """Get a feature from a vector product.
+def get(product_id: str, feature_id: str) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
+    """
+    Get a feature from a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of the Vector Table.
     feature_id : str
         ID of the feature.
 
     Returns
     -------
-    gpd.GeoDataFrame
-        A GeoPandas dataframe.
+    Union[gpd.GeoDataFrame, pd.DataFrame]
+        A Pandas or GeoPandas dataframe.
     """
     response = requests.get(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
@@ -290,30 +291,35 @@ def get(product_id: str, feature_id: str) -> gpd.GeoDataFrame:
 
     check_response(response, "get feature")
 
-    buffer = BytesIO(response.content)
-
-    return gpd.read_parquet(buffer)
+    return response_to_dataframe(response=response)
 
 
 @backoff_wrapper
-def update(product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame) -> None:
-    """Update a feature in a vector product.
+def update(
+    product_id: str,
+    feature_id: str,
+    dataframe: Union[gpd.GeoDataFrame, pd.DataFrame],
+    is_spatial: bool,
+) -> None:
+    """
+    Save/update a feature in a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of the Vector Table.
     feature_id : str
         ID of the feature.
-    dataframe : gpd.GeoDataFrame
-        A GeoPandas dataframe to replace the feature with.
-
+    dataframe : Union[gpd.GeoDataFrame, pd.DataFrame]
+        A GeoPandas GeoDataFrame or a Pandas DataFrame to replace
+        the feature with.
+    is_spatial : bool
+        Boolean indicating whether or not this data is spatial.
     Returns
     -------
     None
     """
-
-    if not isinstance(dataframe, gpd.GeoDataFrame):
+    if not isinstance(dataframe, TYPES):
         raise TypeError(f"Unsupported data type {type(dataframe)}")
 
     if dataframe.shape[0] != 1:
@@ -323,11 +329,11 @@ def update(product_id: str, feature_id: str, dataframe: gpd.GeoDataFrame) -> Non
     dataframe.to_parquet(buffer, index=False)
     buffer.seek(0)
 
-    files = {"file": ("data.parquet", buffer, "application/octet-stream")}
+    files = {"file": ("vector.parquet", buffer, "application/octet-stream")}
 
     response = requests.put(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "is_spatial": str(is_spatial)},
         files=files,
         timeout=REQUEST_TIMEOUT,
     )
@@ -343,12 +349,18 @@ def aggregate(
     aoi: dict = None,
     columns: list = None,
 ) -> Union[int, dict]:
-    """Aggregate statistics for features in a vector product.
+    """
+    Calculate aggregate statistics for features in a Vector Table.
+    The statistic COUNT will always return an integer. All other
+    statistics will return a dictionary of results. Keys of the
+    dictionary will be the column names requested appended with
+    the statistic ('column_1.STATISTIC') and values are the result
+    of the aggregate statistic.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of the Vector Table
     statistic : Statistic
         Statistic to calculate.
     property_filter : Properties, optional
@@ -361,11 +373,6 @@ def aggregate(
     Returns
     -------
     Union[int, dict]
-        The statistic COUNT will always return an integer. All
-        other statistics will return a dictionary of results.
-        Keys of the dictionary will be the column names requested
-        appended with the statistic ('column_1.STATISTIC') and values
-        are the result of the aggregate statistic.
     """
     if not isinstance(statistic, Statistic):
         raise TypeError("'statistic' must be of type <Statistic>.")
@@ -390,12 +397,13 @@ def aggregate(
 
 @backoff_wrapper
 def delete(product_id: str, feature_id: str):
-    """Delete a feature in a vector product.
+    """
+    Delete a feature in a Vector Table.
 
     Parameters
     ----------
     product_id : str
-        ID of the vector product.
+        Product ID of the Vector Table.
     feature_id : str
         ID of the feature.
     """
