@@ -468,12 +468,7 @@ class Table:
         -------
         datetime
         """
-        if not self._created:
-            return self._created
-        try:
-            return datetime.fromisoformat(self._created)
-        except ValueError:
-            return datetime.strptime(self._created, "%Y-%m-%dT%H:%M:%S.%f")
+        return datetime.fromisoformat(self._created)
 
     @property
     def is_spatial(self) -> bool:
