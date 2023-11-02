@@ -762,9 +762,7 @@ class Table:
         ------
         str
         """
-        if self.created:
-            return f"Table: {self.name}\n  id: {self.id}\n  created: {self.created.strftime('%a %b %d %H:%M:%S %Y')}"
-        return f"Table: {self.name}\n  id: {self.id}"
+        return f"Table: {self.name}\n  id: {self.id}\n  created: {self.created.strftime('%a %b %d %H:%M:%S %Y')}"
 
     def __str__(self) -> str:
         """
