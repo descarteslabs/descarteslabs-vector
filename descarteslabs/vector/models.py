@@ -20,7 +20,7 @@ class PointBaseModel(VectorBaseModel):
 
 
 class LineBaseModel(VectorBaseModel):
-    geometry: str = Field(json_schema_extra={"geometry": "LINE"})
+    geometry: str = Field(json_schema_extra={"geometry": "LINESTRING"})
 
 
 class PolygonBaseModel(VectorBaseModel):
@@ -32,7 +32,7 @@ class MultiPointBaseModel(VectorBaseModel):
 
 
 class MultiLineBaseModel(VectorBaseModel):
-    geometry: str = Field(json_schema_extra={"geometry": "MULTILINE"})
+    geometry: str = Field(json_schema_extra={"geometry": "MULTILINESTRING"})
 
 
 class MultiPolygonBaseModel(VectorBaseModel):
