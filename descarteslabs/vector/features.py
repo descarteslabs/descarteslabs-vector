@@ -13,7 +13,7 @@ from descarteslabs.utils import Properties
 from .common import API_HOST, TYPES, get_token
 from .util import backoff_wrapper, check_response, response_to_dataframe
 
-REQUEST_TIMEOUT = 60
+REQUEST_TIMEOUT = 300
 
 
 class Statistic(str, Enum):

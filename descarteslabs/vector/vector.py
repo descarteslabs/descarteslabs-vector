@@ -468,7 +468,10 @@ class Table:
         -------
         datetime
         """
-        return datetime.fromisoformat(self._created)
+        try:
+            return datetime.fromisoformat(self._created)
+        except ValueError:
+            return datetime.strptime(self._created, "%Y-%m-%dT%H:%M:%S.%f")
 
     @property
     def is_spatial(self) -> bool:
@@ -907,11 +910,11 @@ class Table:
         map.add_layer(lyr)
         return lyr
 
-    def search(
+    def collect(
         self, override_options: TableOptions = None
     ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
         """
-        Method to execute a query/search on this Vector Table, returning a
+        Method to execute a query/collect on this Vector Table, returning a
         dataframe. Table options will be honored when executing the query.
         If the Vector Table has a `geometry` column and the `geometry` column
         is included in the Table options, a GeoPandas GeoDataFrame will be
