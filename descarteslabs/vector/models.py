@@ -11,10 +11,6 @@ class VectorBaseModel(BaseModel):
     )
 
 
-class GeometryBaseModel(VectorBaseModel):
-    geometry: str = Field(json_schema_extra={"geometry": "GEOMETRY"})
-
-
 class PointBaseModel(VectorBaseModel):
     geometry: str = Field(json_schema_extra={"geometry": "POINT"})
 
@@ -39,5 +35,6 @@ class MultiPolygonBaseModel(VectorBaseModel):
     geometry: str = Field(json_schema_extra={"geometry": "MULTIPOLYGON"})
 
 
-class GenericFeatureBaseModel(GeometryBaseModel):
+class GenericFeatureBaseModel(VectorBaseModel):
+    geometry: str = Field(json_schema_extra={"geometry": "GEOMETRY"})
     properties: Dict[str, Any] = {}
