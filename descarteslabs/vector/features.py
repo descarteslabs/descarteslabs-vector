@@ -10,10 +10,12 @@ import pandas as pd
 import requests
 from descarteslabs.utils import Properties
 
+from . import __version__
 from .common import API_HOST, TYPES, get_token
 from .util import backoff_wrapper, check_response, response_to_dataframe
 
-REQUEST_TIMEOUT = 300
+REQUEST_TIMEOUT = 600
+USERAGENT = f"dl-vector/{__version__}"
 
 
 class Statistic(str, Enum):
@@ -61,7 +63,11 @@ def add(
 
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features",
-        headers={"Authorization": get_token(), "is_spatial": str(is_spatial)},
+        headers={
+            "Authorization": get_token(),
+            "is_spatial": str(is_spatial),
+            "User-Agent": USERAGENT,
+        },
         files=files,
         timeout=REQUEST_TIMEOUT,
     )
@@ -100,7 +106,7 @@ def query(
         property_filter = property_filter.serialize()
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features/query",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json={"filter": property_filter, "aoi": aoi, "columns": columns},
         timeout=REQUEST_TIMEOUT,
     )
@@ -135,7 +141,7 @@ def _join(params: dict) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
 
     response = requests.post(
         f"{API_HOST}/products/features/join",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json=params,
         timeout=REQUEST_TIMEOUT,
     )
@@ -285,7 +291,7 @@ def get(product_id: str, feature_id: str) -> Union[gpd.GeoDataFrame, pd.DataFram
     """
     response = requests.get(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         timeout=REQUEST_TIMEOUT,
     )
 
@@ -333,7 +339,11 @@ def update(
 
     response = requests.put(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
-        headers={"Authorization": get_token(), "is_spatial": str(is_spatial)},
+        headers={
+            "Authorization": get_token(),
+            "is_spatial": str(is_spatial),
+            "User-Agent": USERAGENT,
+        },
         files=files,
         timeout=REQUEST_TIMEOUT,
     )
@@ -381,7 +391,7 @@ def aggregate(
         property_filter = property_filter.serialize()
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features/aggregate",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json={
             "statistic": statistic.value,
             "filter": property_filter,
@@ -410,7 +420,7 @@ def delete(product_id: str, feature_id: str):
 
     response = requests.delete(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         timeout=REQUEST_TIMEOUT,
     )
 

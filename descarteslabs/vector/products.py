@@ -2,12 +2,14 @@ from typing import List, Optional, Union
 
 import requests
 
+from . import __version__
 from .common import API_HOST, get_token
 from .models import GenericFeatureBaseModel, VectorBaseModel
 from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
 
 REQUEST_TIMEOUT = 120
+USERAGENT = f"dl-vector/{__version__}"
 
 
 def _check_tags(tags: Union[List[str], None] = None):
@@ -97,7 +99,7 @@ def create(
 
     response = requests.post(
         f"{API_HOST}/products/",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json=request_json,
         timeout=REQUEST_TIMEOUT,
     )
@@ -124,14 +126,14 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
     if tags:
         response = requests.get(
             f"{API_HOST}/products/",
-            headers={"Authorization": get_token()},
+            headers={"Authorization": get_token(), "User-Agent": USERAGENT},
             params={"tags": ",".join(tags)},
             timeout=REQUEST_TIMEOUT,
         )
     else:
         response = requests.get(
             f"{API_HOST}/products/",
-            headers={"Authorization": get_token()},
+            headers={"Authorization": get_token(), "User-Agent": USERAGENT},
             timeout=REQUEST_TIMEOUT,
         )
     check_response(response, "list products")
@@ -154,7 +156,7 @@ def get(product_id: str) -> dict:
     """
     response = requests.get(
         f"{API_HOST}/products/{product_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "get product")
@@ -201,7 +203,7 @@ def update(
     _check_tags(tags)
     response = requests.patch(
         f"{API_HOST}/products/{product_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json=_strip_null_values(
             {
                 "name": name,
@@ -234,7 +236,7 @@ def delete(product_id: str) -> None:
     """
     response = requests.delete(
         f"{API_HOST}/products/{product_id}",
-        headers={"Authorization": get_token()},
+        headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "delete product")
