@@ -62,7 +62,7 @@ def add(
     files = {"file": ("vector.parquet", buffer, "application/octet-stream")}
 
     response = requests.post(
-        f"{API_HOST}/products/{product_id}/features",
+        f"{API_HOST}/products/{product_id}/featuresv2",
         headers={
             "Authorization": get_token(),
             "is_spatial": str(is_spatial),
@@ -107,7 +107,12 @@ def query(
     response = requests.post(
         f"{API_HOST}/products/{product_id}/features/query",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
-        json={"filter": property_filter, "aoi": aoi, "columns": columns},
+        json={
+            "format": "Parquet",
+            "filter": property_filter,
+            "aoi": aoi,
+            "columns": columns,
+        },
         timeout=REQUEST_TIMEOUT,
     )
     check_response(response, "query feature")
@@ -292,6 +297,7 @@ def get(product_id: str, feature_id: str) -> Union[gpd.GeoDataFrame, pd.DataFram
     response = requests.get(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
+        params={"format": "Parquet"},
         timeout=REQUEST_TIMEOUT,
     )
 
@@ -338,7 +344,7 @@ def update(
     files = {"file": ("vector.parquet", buffer, "application/octet-stream")}
 
     response = requests.put(
-        f"{API_HOST}/products/{product_id}/features/{feature_id}",
+        f"{API_HOST}/products/{product_id}/featuresv2/{feature_id}",
         headers={
             "Authorization": get_token(),
             "is_spatial": str(is_spatial),
