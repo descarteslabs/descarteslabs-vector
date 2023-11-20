@@ -2,14 +2,10 @@ from typing import List, Optional, Union
 
 import requests
 
-from . import __version__
-from .common import API_HOST, get_token
+from .common import API_HOST, USERAGENT, VECTOR_TIMEOUT, get_token
 from .models import GenericFeatureBaseModel, VectorBaseModel
 from .util import backoff_wrapper, check_response
 from .vector_exceptions import ClientException
-
-REQUEST_TIMEOUT = 120
-USERAGENT = f"dl-vector/{__version__}"
 
 
 def _check_tags(tags: Union[List[str], None] = None):
@@ -101,7 +97,7 @@ def create(
         f"{API_HOST}/products/",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json=request_json,
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "create product")
     return response.json()
@@ -128,13 +124,13 @@ def list(tags: Union[List[str], None] = None) -> List[dict]:
             f"{API_HOST}/products/",
             headers={"Authorization": get_token(), "User-Agent": USERAGENT},
             params={"tags": ",".join(tags)},
-            timeout=REQUEST_TIMEOUT,
+            timeout=VECTOR_TIMEOUT,
         )
     else:
         response = requests.get(
             f"{API_HOST}/products/",
             headers={"Authorization": get_token(), "User-Agent": USERAGENT},
-            timeout=REQUEST_TIMEOUT,
+            timeout=VECTOR_TIMEOUT,
         )
     check_response(response, "list products")
     return response.json()
@@ -157,7 +153,7 @@ def get(product_id: str) -> dict:
     response = requests.get(
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "get product")
     return response.json()
@@ -214,7 +210,7 @@ def update(
                 "owners": owners,
             },
         ),
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "update product")
     return response.json()
@@ -237,6 +233,6 @@ def delete(product_id: str) -> None:
     response = requests.delete(
         f"{API_HOST}/products/{product_id}",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "delete product")

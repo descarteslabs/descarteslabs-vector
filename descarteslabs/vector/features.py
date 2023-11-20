@@ -10,12 +10,8 @@ import pandas as pd
 import requests
 from descarteslabs.utils import Properties
 
-from . import __version__
-from .common import API_HOST, TYPES, get_token
+from .common import API_HOST, TYPES, USERAGENT, VECTOR_TIMEOUT, get_token
 from .util import backoff_wrapper, check_response, response_to_dataframe
-
-REQUEST_TIMEOUT = 600
-USERAGENT = f"dl-vector/{__version__}"
 
 
 class Statistic(str, Enum):
@@ -69,7 +65,7 @@ def add(
             "User-Agent": USERAGENT,
         },
         files=files,
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
 
     check_response(response, "add feature")
@@ -113,7 +109,7 @@ def query(
             "aoi": aoi,
             "columns": columns,
         },
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "query feature")
 
@@ -148,7 +144,7 @@ def _join(params: dict) -> Union[gpd.GeoDataFrame, pd.DataFrame]:
         f"{API_HOST}/products/features/join",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         json=params,
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "join feature")
 
@@ -298,7 +294,7 @@ def get(product_id: str, feature_id: str) -> Union[gpd.GeoDataFrame, pd.DataFram
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
         params={"format": "Parquet"},
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
 
     check_response(response, "get feature")
@@ -351,7 +347,7 @@ def update(
             "User-Agent": USERAGENT,
         },
         files=files,
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
 
     check_response(response, "update feature")
@@ -404,7 +400,7 @@ def aggregate(
             "aoi": aoi,
             "columns": columns,
         },
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
     check_response(response, "aggregate feature")
 
@@ -427,7 +423,7 @@ def delete(product_id: str, feature_id: str):
     response = requests.delete(
         f"{API_HOST}/products/{product_id}/features/{feature_id}",
         headers={"Authorization": get_token(), "User-Agent": USERAGENT},
-        timeout=REQUEST_TIMEOUT,
+        timeout=VECTOR_TIMEOUT,
     )
 
     check_response(response, "delete feature")
