@@ -810,8 +810,8 @@ class Table:
         """
         Add a dataframe to this table. If the Vector Table has a `geometry` column
         the dataframe must be a GeoPandas GeoDataFrame, otherwise a Pandas DataFrame
-        must be provided. Note that the returned dataframe UUID attribution for each
-        row.
+        must be provided. Note that the returned dataframe will have UUID attribution
+        for each row.
 
         Parameters
         ----------
@@ -1284,6 +1284,34 @@ class Feature:
         self._values = {}
         for k, v in dataframe.to_dict().items():
             self._values[k] = v[0]
+
+    def __repr__(self) -> str:
+        """
+        Generate a string representation of this Vector Feature.
+
+        Parameters
+        ----------
+        None
+
+        Return
+        ------
+        str
+        """
+        return f"Feature: {self.name}\n  id: {self.id}\n  table: {self.product_id}"
+
+    def __str__(self) -> str:
+        """
+        Generate a string representation of this Vector Feature.
+
+        Parameters
+        ----------
+        None
+
+        Return
+        ------
+        str
+        """
+        return self.__repr__()
 
     @property
     def is_spatial(self) -> bool:

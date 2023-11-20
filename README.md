@@ -13,25 +13,25 @@ Formal documentation for this library is available under the [Descartes Labs API
 To start using the Vector client, first import it:
 
 ```python
-import descarteslabs.vector
+from descarteslabs.vector import Table, TableOptions, models, properties as p
+import json
+import geopandas as gpd
+import ipyleaflet
 ```
 
-Next, we can create a vector product by executing the following Python code:
+Next, we can create a Vector Table by executing the following Python code:
 
 ```python
-product = vector.Table.create(
-  "my-favourite-shapes", # ID for the table
-  "My favourite shapes"  # Name for the table
-)
+class CustomModel(models.PolygonBaseModel):
+  name: str
+
+table = Table.create(product_id="my-favourite-shapes", name="My favourite shapes", description="This is just one of my favorite shapes", model=CustomModel)
 ```
 
-This product will contain only the most appealing shapes. Products consist of features, which themselves consist of a geometry and properties. Features are encoded as GeoJSON.
-
+This product will contain only the most appealing shapes. Vector Tables consist of features, which themselves consist of a geometry and attributes.
 Let's create a feature that contains a triangle geometry, and give it a name by adding a property:
 
 ```python
-import json
-
 geojson = {
   "type": "FeatureCollection",
   "features": [
@@ -68,19 +68,18 @@ geojson = {
 }
 ```
 
-...and then add it to the product we just created by executing the following Python code:
+...and then add it to the Vector table we just created by executing the following Python code:
 
 ```python
-product.add(feature_collection)
+gdf = gpd.GeoDataFrame.from_features(geojson["features"], crs="EPSG:4326")
+table.add(gdf)
 ```
 
 We can retrieve this feature by querying the product in a few different ways. First, by its name:
 
 ```python
-p = vector.property_filtering.Properties()
-product.query(
-    property_filter=(p.name == "The coldest lake"),
-)
+table.options.property_filter = p.name == "The coldest lake"
+gdf = table.collect()
 ```
 
 ...and second, by an AOI which intersects with the geometry of our feature. The AOI is defined as a GeoJSON geometry:
@@ -116,16 +115,14 @@ aoi = {
 }
 
 # ...and query the product
-product.query(
-    aoi=aoi,
-)
+table.reset_options()
+table.options.aoi = aoi
+gdf = table.collect()
 ```
 
 Since, in this case, our feature has a geometry, we can also visualise it on a map! Let's do this now, using `ipyleaflet`:
 
 ```python
-import ipyleaflet
-
 # Instantiate and configure the ipyleaflet Map
 m = ipyleaflet.Map()
 m.center = 54.549829, -110.060936
@@ -135,7 +132,7 @@ m.zoom = 9
 display(m)
 
 # Visualize the vector tile layer on the map
-product.visualize("My favourite shapes", m)
+table.visualize("My favourite shapes", m)
 ```
 
 Which should yield the feature we just created, outlining the coldest lake on Earth:
